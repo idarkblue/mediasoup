@@ -1,8 +1,103 @@
 # Changelog
 
-### 3.5.16 (WIP)
 
-* Update `Catch2` to v2.12.2.
+### 3.6.13
+
+* RTP on `DirectTransport` (issue #433, PR #434):
+  - New API `producer.send(rtpPacket: Buffer)`.
+  - New API `consumer.on('rtp', (rtpPacket: Buffer)`.
+  - New API `directTransport.sendRtcp(rtcpPacket: Buffer)`.
+  - New API `directTransport.on('rtcp', (rtpPacket: Buffer)`.
+
+
+### 3.6.12
+
+* Release script.
+
+
+### 3.6.11
+
+* `Transport`: rename `maxSctpSendBufferSize` to `sctpSendBufferSize`.
+
+
+### 3.6.10
+
+* `Transport`: Implement `maxSctpSendBufferSize`.
+* Update `libuv` to 1.38.1.
+* Update `Catch` to 2.12.4.
+* Update NPM deps.
+
+
+### 3.6.9
+
+* `Transport::ReceiveRtpPacket()`: Call `RecvStreamClosed(packet->GetSsrc())` if received RTP packet does not match any `Producer`.
+* `Transport::HandleRtcpPacket()`: Ensure `Consumer` is found for received NACK Feedback packets.
+* Update NPM deps.
+* Update C++ `Catch` dep.
+* Fix issue #408.
+
+
+### 3.6.8
+
+* Fix SRTP leak due to streams not being removed when a `Producer` or `Consumer` is closed.
+  - PR #428 (fixes issues #426). 
+  - Credits to credits to @penguinol for reporting and initial work at PR #427.
+* Update `nlohmann::json` C++ dep to 3.8.0.
+* C++: Enhance `const` correctness.
+* Update NPM deps.
+
+
+### 3.6.7
+
+* `ConsumerScore`: Add `producerScores`, scores of all RTP streams in the producer ordered by encoding (just useful when the producer uses simulcast).
+  - PR #421 (fixes issues #420).
+* Hide worker executable console in Windows.
+  - PR #419 (credits to @BlueMagnificent).
+* `RtpStream.cpp`: Fix wrong `std::round()` usage.
+  - Issue #423.
+
+
+### 3.6.6
+
+* Update `usrsctp` library.
+* Update ESlint and TypeScript related dependencies.
+
+
+### 3.6.5
+
+* Set `score:0` when `dtx:true` is set in an `encoding` and there is no RTP for some seconds for that RTP stream.
+  - Fixes #415.
+
+
+### 3.6.4
+
+* `gyp`: Fix CLT version detection in OSX Catalina when XCode app is not installed.
+  - PR #413 (credits to @enimo).
+
+
+### 3.6.3
+
+* Modernize TypeScript.
+
+
+### 3.6.2
+
+* Fix crash in `Transport.ts` when closing a `DataConsumer` created on a `DirectTransport`.
+
+
+### 3.6.1
+
+* Export new `DirectTransport` in `types`.
+* Make `DataProducerOptions` optional (not needed when in a `DirectTransport`).
+
+
+### 3.6.0
+
+* SCTP/DataChannel termination:
+  - PR #409
+  - Allow the Node application to directly send text/binary messages to mediasoup-worker C++ process so others can consume them using `DataConsumers`.
+  - And vice-versa: allow the Node application to directly consume in Node messages send by `DataProducers`.
+* Add `WorkerLogTag` TypeScript enum and also add a new 'message' tag into it.
 
 
 ### 3.5.15
@@ -12,7 +107,7 @@
 
 ### 3.5.14
 
-* Update deps, speciall `uuid` and `@types/uuid` that had a TypeScript related bug.
+* Update deps, specially `uuid` and `@types/uuid` that had a TypeScript related bug.
 * `TransportCongestionClient.cpp`: Improve sender side bandwidth estimation by do not reporting `this->initialAvailableBitrate` as available bitrate due to strange behavior in the algorithm.
 
 

@@ -64,16 +64,17 @@ namespace RTC
 
 	public:
 		SctpAssociation(
-		  Listener* listener, uint16_t os, uint16_t mis, size_t maxSctpMessageSize, bool isDataChannel);
+		  Listener* listener,
+		  uint16_t os,
+		  uint16_t mis,
+		  size_t maxSctpMessageSize,
+		  size_t sctpSendBufferSize,
+		  bool isDataChannel);
 		~SctpAssociation();
 
 	public:
 		void FillJson(json& jsonObject) const;
 		void TransportConnected();
-		size_t GetMaxSctpMessageSize() const
-		{
-			return this->maxSctpMessageSize;
-		}
 		SctpState GetState() const
 		{
 			return this->state;

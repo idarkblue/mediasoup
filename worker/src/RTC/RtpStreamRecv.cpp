@@ -10,7 +10,8 @@ namespace RTC
 {
 	/* Static. */
 
-	static constexpr uint64_t InactivityCheckInterval{ 1500u }; // In ms.
+	static constexpr uint64_t InactivityCheckInterval{ 1500u };        // In ms.
+	static constexpr uint64_t InactivityCheckIntervalWithDtx{ 5000u }; // In ms.
 
 	/* TransmissionCounter methods. */
 
@@ -187,14 +188,15 @@ namespace RTC
 		if (this->params.useNack)
 			this->nackGenerator.reset(new RTC::NackGenerator(this));
 
-		// Run the RTP inactivity periodic timer (unless DTX is enabled).
-		if (!this->params.useDtx)
-		{
-			this->inactivityCheckPeriodicTimer = new Timer(this);
+		// Run the RTP inactivity periodic timer (use a different timeout if DTX is
+		// enabled).
+		this->inactivityCheckPeriodicTimer = new Timer(this);
+		this->inactive                     = false;
 
+		if (!this->params.useDtx)
 			this->inactivityCheckPeriodicTimer->Start(InactivityCheckInterval);
-			this->inactive = false;
-		}
+		else
+			this->inactivityCheckPeriodicTimer->Start(InactivityCheckIntervalWithDtx);
 	}
 
 	RtpStreamRecv::~RtpStreamRecv()
@@ -446,7 +448,7 @@ namespace RTC
 		if (expectedInterval == 0 || lostInterval <= 0)
 			this->fractionLost = 0;
 		else
-			this->fractionLost = std::round(((lostInterval << 8) / expectedInterval));
+			this->fractionLost = std::round((static_cast<double>(lostInterval << 8) / expectedInterval));
 
 		// Worst remote fraction lost is not worse than local one.
 		if (worstRemoteFractionLost <= this->fractionLost)
@@ -555,15 +557,11 @@ namespace RTC
 
 		// If no Receiver Extended Report was received by the remote endpoint yet,
 		// ignore lastRr and dlrr values in the Sender Extended Report.
-		if (!lastRr || !dlrr)
-			rtt = 0;
-		else if (compactNtp > dlrr + lastRr)
+		if (lastRr && dlrr && (compactNtp > dlrr + lastRr))
 			rtt = compactNtp - dlrr - lastRr;
-		else
-			rtt = 0;
 
 		// RTT in milliseconds.
-		this->rtt = (rtt >> 16) * 1000;
+		this->rtt = static_cast<float>(rtt >> 16) * 1000;
 		this->rtt += (static_cast<float>(rtt & 0x0000FFFF) / 65536) * 1000;
 
 		if (this->rtt > 0.0f)
@@ -738,7 +736,7 @@ namespace RTC
 		MS_ASSERT(retransmitted >= repaired, "repaired packets cannot be more than retransmitted ones");
 
 		if (retransmitted > 0)
-			repairedWeight *= repaired / retransmitted;
+			repairedWeight *= static_cast<float>(repaired) / retransmitted;
 
 		lost -= repaired * repairedWeight;
 
