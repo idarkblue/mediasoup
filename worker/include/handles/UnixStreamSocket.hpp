@@ -36,6 +36,7 @@ public:
 
 public:
 	UnixStreamSocket(int fd, size_t bufferSize, UnixStreamSocket::Role role);
+	UnixStreamSocket(uv_pipe_t *handle, size_t bufferSize, UnixStreamSocket::Role role);
 	UnixStreamSocket& operator=(const UnixStreamSocket&) = delete;
 	UnixStreamSocket(const UnixStreamSocket&)            = delete;
 	virtual ~UnixStreamSocket();

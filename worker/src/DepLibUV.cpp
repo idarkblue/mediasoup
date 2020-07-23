@@ -15,11 +15,9 @@ void DepLibUV::ClassInit()
 {
 	// NOTE: Logger depends on this so we cannot log anything here.
 
-	DepLibUV::loop = new uv_loop_t;
+	DepLibUV::loop = uv_loop_new();
 
-	int err = uv_loop_init(DepLibUV::loop);
-
-	if (err != 0)
+	if (loop == nullptr)
 		MS_ABORT("libuv initialization failed");
 }
 

@@ -60,6 +60,34 @@ inline static void onShutdown(uv_shutdown_t* req, int /*status*/)
 }
 
 /* Instance methods. */
+UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, size_t bufferSize, UnixStreamSocket::Role role)
+  : bufferSize(bufferSize), role(role)
+{
+	MS_TRACE_STD();
+
+	int err;
+
+	this->uvHandle       = handle;
+	this->uvHandle->data = static_cast<void*>(this);
+
+	if (this->role == UnixStreamSocket::Role::CONSUMER)
+	{
+		// Start reading.
+		err = uv_read_start(
+		  reinterpret_cast<uv_stream_t*>(this->uvHandle),
+		  static_cast<uv_alloc_cb>(onAlloc),
+		  static_cast<uv_read_cb>(onRead));
+
+		if (err != 0)
+		{
+			uv_close(reinterpret_cast<uv_handle_t*>(this->uvHandle), static_cast<uv_close_cb>(onClose));
+
+			MS_THROW_ERROR_STD("uv_read_start() failed: %s", uv_strerror(err));
+		}
+	}
+
+	// NOTE: Don't allocate the buffer here. Instead wait for the first uv_alloc_cb().
+}
 
 UnixStreamSocket::UnixStreamSocket(int fd, size_t bufferSize, UnixStreamSocket::Role role)
   : bufferSize(bufferSize), role(role)

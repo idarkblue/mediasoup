@@ -9,7 +9,8 @@
       'deps/libsrtp/libsrtp.gyp:libsrtp',
       'deps/usrsctp/usrsctp.gyp:usrsctp',
       'deps/libwebrtc/libwebrtc.gyp:libwebrtc',
-      'deps/libwebrtc/deps/abseil-cpp/abseil-cpp.gyp:abseil'
+      'deps/libwebrtc/deps/abseil-cpp/abseil-cpp.gyp:abseil',
+      'deps/uwebsockets/uSockets/usockets.gyp:usockets'
     ],
     # TODO: SCTP_DEBUG must be dynamic based on a condition variable in common.gyp.
     # 'defines': [ 'SCTP_DEBUG' ],
@@ -320,6 +321,50 @@
       [
         # C++ source files.
         'src/main.cpp'
+      ]
+    },
+    {
+      'target_name': 'mediasoup-master',
+      'sources':
+      [
+        # C++ source files.
+        'src/Master/LiveStream.cpp',
+        'src/Master/HttpServer.cpp',
+        'src/Master/MasterProcess.cpp',
+        'src/Master/WorkerProcess.cpp',
+        'src/Master/WebRtcService.cpp',
+        'src/Master/MasterRequest.cpp',
+        'src/Master/UnixStreamSocket.cpp',
+        'src/Master/Filter.cpp',
+        'src/Master/Log.cpp',
+        'src/Master/Loop.cpp',
+        'src/Master/PipeServer.cpp',
+        'src/Master/PipeClient.cpp',
+        'src/master.cpp',
+      ],
+      'include_dirs':
+      [
+        'deps/uwebsockets/src',
+        'deps/uwebsockets/uSockets/src',
+        'deps/uwebsockets/examples',
+        'deps/spdlog/include'
+      ],
+      
+      'conditions' : [
+        [ 'OS == "mac"', {
+          'xcode_settings':{
+            'OTHER_CFLAGS': [ '-DLIBUS_USE_LIBUV', '-DLIBUS_USE_OPENSSL' ],
+            'WARNING_CFLAGS': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-newline-eof' ],
+            'OTHER_CPLUSPLUSFLAGS' : [ '-std=c++17', '-DLIBUS_USE_LIBUV', '-DLIBUS_USE_OPENSSL' ],
+            'OTHER_LDFLAGS': [ '-lz' ]
+          }
+        }],
+        [ 'OS == "linux"', {
+            'cflags': [ '-g', '-O0', '-std=c++17', '-Wno-newline-eof'],
+            'ldflags': [ '-lz' ],
+            'defines': ['LIBUS_USE_OPENSSL', 'LIBUS_USE_LIBUV']
+
+        }]
       ]
     },
     {

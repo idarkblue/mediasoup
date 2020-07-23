@@ -24,6 +24,12 @@ ifeq ($(MEDIASOUP_WORKER_BIN),)
 	$(MAKE) -j$(CORES) BUILDTYPE=$(MEDIASOUP_BUILDTYPE) -C out
 endif
 
+master:
+ifeq ($(MEDIASOUP_WORKER_BIN),)
+	$(PYTHON) ./scripts/configure.py -R mediasoup-master
+	$(MAKE) -j$(CORES) BUILDTYPE=$(MEDIASOUP_BUILDTYPE) -C out
+endif
+
 clean:
 	$(RM) -rf out/Release/mediasoup-worker
 	$(RM) -rf out/Release/obj.target/mediasoup-worker

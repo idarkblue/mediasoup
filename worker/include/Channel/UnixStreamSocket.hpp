@@ -20,6 +20,7 @@ namespace Channel
 
 	public:
 		ConsumerSocket(int fd, size_t bufferSize, Listener* listener);
+		ConsumerSocket(uv_pipe_t *handle, size_t bufferSize, Listener* listener);
 		/* Pure virtual methods inherited from ::UnixStreamSocket. */
 	public:
 		void UserOnUnixStreamRead() override;
@@ -36,6 +37,7 @@ namespace Channel
 	{
 	public:
 		ProducerSocket(int fd, size_t bufferSize);
+		ProducerSocket(uv_pipe_t *handle, size_t bufferSize);
 
 		/* Pure virtual methods inherited from ::UnixStreamSocket. */
 	public:

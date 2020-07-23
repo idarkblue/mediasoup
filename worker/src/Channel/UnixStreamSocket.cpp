@@ -152,6 +152,12 @@ namespace Channel
 		MS_TRACE_STD();
 	}
 
+	ConsumerSocket::ConsumerSocket(uv_pipe_t *handle, size_t bufferSize, Listener* listener)
+	  : ::UnixStreamSocket(handle, bufferSize, ::UnixStreamSocket::Role::CONSUMER), listener(listener)
+	{
+		MS_TRACE_STD();
+	}
+
 	void ConsumerSocket::UserOnUnixStreamRead()
 	{
 		MS_TRACE_STD();
@@ -297,6 +303,12 @@ namespace Channel
 
 	ProducerSocket::ProducerSocket(int fd, size_t bufferSize)
 	  : ::UnixStreamSocket(fd, bufferSize, ::UnixStreamSocket::Role::PRODUCER)
+	{
+		MS_TRACE_STD();
+	}
+
+	ProducerSocket::ProducerSocket(uv_pipe_t *handle, size_t bufferSize)
+	  : ::UnixStreamSocket(handle, bufferSize, ::UnixStreamSocket::Role::PRODUCER)
 	{
 		MS_TRACE_STD();
 	}

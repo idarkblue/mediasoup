@@ -37,3 +37,5 @@
 
 # Vistual Studio Code stuff.
 /.vscode/
+
+*.code-workspace
