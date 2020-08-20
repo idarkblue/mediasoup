@@ -4,7 +4,7 @@
 #include "Master/HttpServer.hpp"
 
 namespace Master {
-HttpServer::HttpServer(MessageListener *listener)
+HttpServer::HttpServer(NetServer::Listener *listener)
 {
     m_listener = listener;
 }
@@ -14,13 +14,11 @@ HttpServer::~HttpServer()
 
 }
 
-int HttpServer::SetHttp(int port, MessageListener *listener)
+int HttpServer::StartHttp(int port)
 {
-    if (listener) {
-        m_listener = listener;
-    }
+    us_socket_context_options_t options;
     m_httpPort = port;
-    m_httpApp = new uWS::App();
+    m_httpApp = new uWS::App(options);
     m_httpApp->post("/*", [this](uWS::HttpResponse<false> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
             this->OnAborted(res);
@@ -35,27 +33,25 @@ int HttpServer::SetHttp(int port, MessageListener *listener)
 
     m_httpApp->listen(port, [port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
-            PMS_INFO("Listening on port {}\r\n", port);
+            PMS_INFO("Listening on port {}", port);
         } else {
-            PMS_ERROR("Listening on port {} failed.\r\n", port);
+            PMS_ERROR("Listening on port {} failed.", port);
         }
     });
 
     return 0;
 }
 
-int HttpServer::SetHttp(int port, std::string keyfile, std::string certfile, std::string passphrase, MessageListener *listener)
+int HttpServer::StartHttp(int port, std::string keyfile, std::string certfile, std::string passphrase)
 {
-    if (listener) {
-        m_listener = listener;
-    }
     m_httpsPort = port;
 
-    m_httpsApp = new uWS::SSLApp({
-        .key_file_name = keyfile.c_str(),
-        .cert_file_name = certfile.c_str(),
-        .passphrase = passphrase.c_str(),
-    });
+    us_socket_context_options_t opt;
+    opt.key_file_name = keyfile.c_str();
+    opt.cert_file_name = certfile.c_str();
+    opt.passphrase = passphrase.c_str();
+
+    m_httpsApp = new uWS::SSLApp(opt);
 
     m_httpsApp->post("/*", [this](uWS::HttpResponse<true> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
@@ -71,30 +67,74 @@ int HttpServer::SetHttp(int port, std::string keyfile, std::string certfile, std
 
     m_httpsApp->listen(port, [port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
-            PMS_ERROR("Listening on port {} success\r\n", port);
+            PMS_ERROR("Listening on port {} success", port);
         } else {
-            PMS_ERROR("Listening on port {} failed.\r\n", port);
+            PMS_ERROR("Listening on port {} failed.", port);
         }
     });
 
     return 0;
 }
 
+int HttpServer::ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_t nsPayloadLen)
+{
+    if (request == nullptr || request->GetConnectionHandle() == nullptr) {
+        return -1;
+    }
+
+    if (request->IsSsl()) {
+        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) request->GetConnectionHandle();
+
+        std::string content((const char *)nsPayload, nsPayloadLen);
+        res->end(content);
+    } else {
+        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) request->GetConnectionHandle();
+
+        std::string content((const char *)nsPayload, nsPayloadLen);
+        res->end(content);
+    }
+
+    return 0;
+}
+
+int HttpServer::ReplyString(NetRequest *request, std::string data)
+{
+    if (request == nullptr || request->GetConnectionHandle() == nullptr) {
+        return -1;
+    }
+
+    if (request->IsSsl()) {
+        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) request->GetConnectionHandle();
+
+        res->end(data);
+    } else {
+        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) request->GetConnectionHandle();
+
+        res->end(data);
+    }
+
+    return 0;
+}
+
 int HttpServer::OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl)
 {
-    MasterRequest *r = this->FetchRequest(handle, ssl);
+    NetRequest *request = this->FetchRequest(handle, ssl);
 
-    if (r == nullptr) {
+    if (request == nullptr) {
         PMS_ERROR("Fetch request failed.");
         return -1;
     }
 
-    r->Padding(chunk);
+    request->Padding(chunk);
 
     if (isEnd) {
-        r->SetUri(req->getUrl());
+        if (request->ParseUri(req->getUrl()) != 0) {
+            PMS_ERROR("Failed to parse uri {}", req->getUrl());
+            return -1;
+        }
+
         if (m_listener) {
-            m_listener->OnMessage(r);
+            m_listener->OnMessage(request);
         }
     }
 
@@ -103,60 +143,12 @@ int HttpServer::OnPost(void *handle, uWS::HttpRequest *req, std::string_view chu
 
 void HttpServer::OnAborted(void *handle)
 {
+    auto it = m_requestMap.find(handle);
+    if (it != m_requestMap.end() && this->m_listener) {
+        m_listener->OnAborted(it->second);
+    }
+
     this->RemoveRequest(handle);
-}
-
-void HttpServer::RemoveRequest(void *handle)
-{
-    auto it = m_requestMap.find(handle);
-    if (it == m_requestMap.end()) {
-        return;
-    }
-
-    MasterRequest *r = it->second;
-
-    if (r != nullptr && m_listener) {
-        m_listener->OnAborted(r);
-    }
-
-    m_requestMap.erase(it);
-
-    this->PutRequestSpace(r);
-}
-
-MasterRequest* HttpServer::FetchRequest(void *handle, bool ssl)
-{
-    auto it = m_requestMap.find(handle);
-    if (it != m_requestMap.end()) {
-        return it->second;
-    }
-
-    auto r = this->GetRequestSpace(ssl);
-    m_requestMap[handle] = r;
-
-    r->Reset(MessageSourceType::MS_HTTP, ssl, handle, nullptr);
-
-    return r;
-}
-
-MasterRequest* HttpServer::GetRequestSpace(bool ssl)
-{
-    if (m_freeRequest.size() == 0) {
-        return new MasterRequest();
-    }
-
-    MasterRequest *r = m_freeRequest.front();
-
-    m_freeRequest.pop_front();
-
-    return r;
-
-}
-
-void HttpServer::PutRequestSpace(MasterRequest *r)
-{
-    r->Clear();
-    m_freeRequest.push_back(r);
 }
 
 }

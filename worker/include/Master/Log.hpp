@@ -10,6 +10,7 @@
 #include "spdlog/sinks/stdout_sinks.h"
 
 #define PMS_LOGGER "pms"
+#define PWS_LOGGER "pms"
 
 #ifdef MS_LOG_FILE_LINE
     #define _PMS_LOG_STR "{}:{} | {}::{}()"
@@ -47,8 +48,21 @@ public:
     spdlog::get(PMS_LOGGER)->warn( _PMS_LOG_STR_DESC desc, _PMS_LOG_ARG, ##__VA_ARGS__);
 #define PMS_ERROR(desc, ...) \
     spdlog::get(PMS_LOGGER)->error( _PMS_LOG_STR_DESC desc, _PMS_LOG_ARG, ##__VA_ARGS__);
-#define PMS_CRITICAL(desc, ...) \
-    spdlog::get(PMS_LOGGER)->critical( _PMS_LOG_STR_DESC desc, _PMS_LOG_ARG, ##__VA_ARGS__);
+//#define PMS_CRITICAL(desc, ...) \
+//    spdlog::get(PMS_LOGGER)->critical( _PMS_LOG_STR_DESC desc, _PMS_LOG_ARG, ##__VA_ARGS__);
+
+#define PWS_TRACE(desc, ...) \
+    spdlog::get(PWS_LOGGER)->trace(desc, ##__VA_ARGS__);
+#define PWS_DEBUG(desc, ...) \
+    spdlog::get(PWS_LOGGER)->debug(desc, ##__VA_ARGS__);
+#define PWS_INFO(desc, ...) \
+    spdlog::get(PWS_LOGGER)->info(desc, ##__VA_ARGS__);
+#define PWS_WARN(desc, ...) \
+    spdlog::get(PWS_LOGGER)->warn(desc, ##__VA_ARGS__);
+#define PWS_ERROR(desc, ...) \
+    spdlog::get(PWS_LOGGER)->error(desc, ##__VA_ARGS__);
+//#define PWS_CRITICAL(desc, ...) \
+//    spdlog::get(PWS_LOGGER)->critical(desc, ##__VA_ARGS__);
 
 }
 

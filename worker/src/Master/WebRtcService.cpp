@@ -6,9 +6,11 @@
 
 namespace Master {
 
-WebRtcService::WebRtcService()
+WebRtcService::WebRtcService(NetServer *messageServer)
 {
+    messageServer->SetListener(this);
 
+    m_messageServer = messageServer;
 }
 
 WebRtcService::~WebRtcService()
@@ -16,9 +18,8 @@ WebRtcService::~WebRtcService()
 
 }
 
-int WebRtcService::OnConnection(RtcSession *s, ConnectionValue *val)
-{
-    return this->Next()->OnConnection(s, val);
+void WebRtcService::SetMaster(MasterProcess *master) {
+    m_master = master;
 }
 
 int WebRtcService::OnPlay(RtcSession *s, PlayValue *val)
@@ -36,15 +37,18 @@ int WebRtcService::OnCloseStream(RtcSession *s, CloseStreamValue *val)
     return this->Next()->OnCloseStream(s, val);
 }
 
-int WebRtcService::OnMessage(MasterRequest *r)
+int WebRtcService::OnMessage(NetRequest *request)
 {
-    PMS_DEBUG("OnMessage | {}", r->GetData());
+    PMS_DEBUG("OnMessage | uri {}, app {}, stream {}, method {} => {}",
+        request->GetUri(), request->GetApp(), request->GetStreamName(),
+        request->GetMethod(), request->GetData());
+
     return 0;
 }
 
-void WebRtcService::OnAborted(MasterRequest *r)
+void WebRtcService::OnAborted(NetRequest *request)
 {
-    PMS_DEBUG("OnAborted | {}", (void *)r);
+//    PMS_DEBUG("OnAborted | {}", r);
     return;
 }
 

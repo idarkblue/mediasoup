@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     Master::MasterProcess::ClassInit(Master::Loop::FetchLoop());
 
     Master::HttpServer    http;
-    Master::WebRtcService rtc;
+    Master::WebRtcService rtc(&http);
     Master::MasterProcess master;
 
     Master::MasterProcess::Options opt = {
@@ -38,7 +38,8 @@ int main(int argc, char **argv)
 
     master.ActiveWorkers(opt);
     master.RegisterFilter(&rtc);
-    http.SetHttp(8080, &rtc);
+    rtc.SetMaster(&master);
+    http.StartHttp(8080);
 
     Master::Loop::Run();
 }

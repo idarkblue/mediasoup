@@ -9,7 +9,6 @@ class Filter;
 
 class Filter {
 public:
-    virtual int OnConnection(RtcSession *s, ConnectionValue *val) = 0;
     virtual int OnPlay(RtcSession *s, PlayValue *val) = 0;
     virtual int OnPublish(RtcSession *s, PublishValue *val) = 0;
     virtual int OnCloseStream(RtcSession *s, CloseStreamValue *val) = 0;

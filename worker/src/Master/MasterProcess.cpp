@@ -106,13 +106,9 @@ void MasterProcess::RegisterFilter(Filter *filter)
     m_filter = filter;
 }
 
-int MasterProcess::ConnectionFilter(RtcSession *s, ConnectionValue *val)
-{
-    return m_filter->OnConnection(s, val);
-}
-
 int MasterProcess::PlayFilter(RtcSession *s, PlayValue *val)
 {
+    m_workers[0]->CreateRouter("router-0001");
     return m_filter->OnPlay(s, val);
 }
 
@@ -124,11 +120,6 @@ int MasterProcess::PublishFilter(RtcSession *s, PublishValue *val)
 int MasterProcess::CloseStreamFilter(RtcSession *s, CloseStreamValue *val)
 {
     return m_filter->OnCloseStream(s, val);
-}
-
-int MasterProcess::OnConnection(RtcSession *s, ConnectionValue *val)
-{
-    return 0;
 }
 
 int MasterProcess::OnPlay(RtcSession *s, PlayValue *val)

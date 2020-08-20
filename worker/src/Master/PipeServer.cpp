@@ -81,10 +81,18 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
 
     PMS_INFO("Accept success...");
 
-    auto client = new Master::UnixStreamSocket(pipe, this);
+    ::UnixStreamSocket::Role role = ::UnixStreamSocket::Role::CONSUMER;
+
+    if (m_clients.size() == 0) {
+        role = ::UnixStreamSocket::Role::PRODUCER;
+    } else {
+        role = ::UnixStreamSocket::Role::CONSUMER;
+    }
+
+    auto client = new Master::UnixStreamSocket(pipe, this, role);
 
     if (m_listener) {
-        m_listener->OnChannelAccept(client);
+        m_listener->OnChannelAccept(this, client);
     }
 
     m_clients.push_back(client);
@@ -93,7 +101,7 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
 void PipeServer::OnChannelMessage(Master::UnixStreamSocket* channel, std::string_view &payload)
 {
     if (m_listener) {
-        m_listener->OnChannelRecv(channel, payload);
+        m_listener->OnChannelRecv(this, channel, payload);
     }
 
     PMS_INFO("{}", payload);
@@ -102,7 +110,7 @@ void PipeServer::OnChannelMessage(Master::UnixStreamSocket* channel, std::string
 void PipeServer::OnChannelClosed(Master::UnixStreamSocket* channel)
 {
     if (m_listener) {
-        m_listener->OnChannelClosed(channel);
+        m_listener->OnChannelClosed(this, channel);
     }
 
     PMS_ERROR("channel closed");

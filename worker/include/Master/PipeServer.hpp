@@ -23,9 +23,9 @@ public:
 public:
     class Listener {
     public:
-        virtual void OnChannelAccept(UnixStreamSocket *channel) = 0;
-        virtual void OnChannelClosed(UnixStreamSocket *channel) = 0;
-        virtual void OnChannelRecv(UnixStreamSocket *channel, std::string_view &payload) = 0;
+        virtual void OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel) = 0;
+        virtual void OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel) = 0;
+        virtual void OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload) = 0;
     };
 
 public:

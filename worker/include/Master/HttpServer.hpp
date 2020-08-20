@@ -5,42 +5,33 @@
 #include <map>
 #include <list>
 #include "App.h"
-#include "MessageListener.hpp"
-#include "MasterRequest.hpp"
+#include "NetServer.hpp"
 
 namespace Master {
 
-class HttpServer {
+class HttpServer : public NetServer {
 
 public:
-    HttpServer(MessageListener *listener = nullptr);
+    HttpServer(Listener *listener = nullptr);
     virtual ~HttpServer();
 
-
-    int SetHttp(int port, MessageListener *listener = nullptr);
-    int SetHttp(int port, std::string keyfile, std::string certfile, std::string passphrase, MessageListener *listener = nullptr);
+    void SetListener(Listener *listener);
+    int StartHttp(int port);
+    int StartHttp(int port, std::string keyfile, std::string certfile, std::string passphrase);
 
     int OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl);
     void OnAborted(void *handle);
 
-protected:
-    void RemoveRequest(void *handle);
-    MasterRequest* FetchRequest(void *handle, bool ssl);
-
-private:
-    MasterRequest* GetRequestSpace(bool ssl);
-    void PutRequestSpace(MasterRequest *r);
+public:
+    virtual int ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_t nsPayloadLen) override;
+    virtual int ReplyString(NetRequest *request, std::string data) override;
 
 private:
     int m_httpPort  { 80 };
     int m_httpsPort { 443 };
 
-    std::map<void *, MasterRequest *> m_requestMap;
     uWS::App        *m_httpApp  { nullptr };
     uWS::SSLApp     *m_httpsApp { nullptr };
-    MessageListener *m_listener { nullptr };
-
-    std::list<MasterRequest*> m_freeRequest;
 };
 
 }

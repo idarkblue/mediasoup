@@ -39,3 +39,5 @@
 /.vscode/
 
 *.code-workspace
+
+./worker/logs

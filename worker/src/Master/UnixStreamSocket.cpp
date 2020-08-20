@@ -22,8 +22,8 @@ static constexpr size_t NsPayloadMaxLen{ 4194304 };
 static uint8_t WriteBuffer[NsMessageMaxLen];
 
 /* Instance methods. */
-UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, Listener* listener)
-    : ::UnixStreamSocket(handle, NsMessageMaxLen, ::UnixStreamSocket::Role::CONSUMER), m_listener(listener)
+UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, Listener* listener, ::UnixStreamSocket::Role role)
+    : ::UnixStreamSocket(handle, NsMessageMaxLen, role), m_listener(listener)
 {
     MS_TRACE_STD();
 }
@@ -31,11 +31,6 @@ UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, Listener* listener)
 UnixStreamSocket::~UnixStreamSocket()
 {
     MS_TRACE_STD();
-}
-
-WorkerProcess* UnixStreamSocket::GetWorkerProcess()
-{
-    return m_wp;
 }
 
 void UnixStreamSocket::SetListener(Listener* listener)
@@ -77,6 +72,14 @@ void UnixStreamSocket::SendBinary(const uint8_t* nsPayload, size_t nsPayloadLen)
     }
 
     SendImpl(nsPayload, nsPayloadLen);
+}
+
+void UnixStreamSocket::SendString(std::string &message)
+{
+    const uint8_t *nsPayload = (const uint8_t *) message.c_str();
+    size_t nsPayloadLen = message.length();
+
+    this->SendBinary(nsPayload, nsPayloadLen);
 }
 
 void UnixStreamSocket::SendImpl(const void* nsPayload, size_t nsPayloadLen)
@@ -235,4 +238,11 @@ void UnixStreamSocket::UserOnUnixStreamSocketClosed()
     // Notify the listener.
     this->m_listener->OnChannelClosed(this);
 }
+
+
+::UnixStreamSocket::Role UnixStreamSocket::GetRole()
+{
+    return this->role;
+}
+
 } // namespace

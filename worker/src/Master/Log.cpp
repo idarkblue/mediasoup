@@ -39,7 +39,7 @@ void Log::AddLogger(std::string name, spdlog::level::level_enum level)
 
     spdlog::register_logger(logger);
     logger->info("Logger [{}] added", name);
-    logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [thread %t] [%^%l%$] : %v");
+    logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [master %t] [%^%l%$] : %v");
 }
 
 }

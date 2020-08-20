@@ -18,16 +18,17 @@ public:
     };
 
 public:
-    UnixStreamSocket(uv_pipe_t *handle, Listener* listener);
+    UnixStreamSocket(uv_pipe_t *handle, Listener* listener, ::UnixStreamSocket::Role);
     virtual ~UnixStreamSocket();
-
-public:
-    WorkerProcess* GetWorkerProcess();
 
 public:
     void SetListener(Listener* listener);
     void Send(json& jsonMessage);
     void SendBinary(const uint8_t* nsPayload, size_t nsPayloadLen);
+    void SendString(std::string &message);
+
+public:
+    ::UnixStreamSocket::Role GetRole();
 
     /* Pure virtual methods inherited from ::UnixStreamSocket. */
 public:
@@ -40,7 +41,6 @@ private:
 private:
     // Passed by argument.
     Listener *m_listener{ nullptr };
-    WorkerProcess *m_wp { nullptr };
     // Others.
     size_t m_msgStart{ 0u }; // Where the latest message starts.
 };

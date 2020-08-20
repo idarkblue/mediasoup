@@ -47,7 +47,6 @@ public:
 
     void RegisterFilter(Filter *filter);
 
-    int ConnectionFilter(RtcSession *s, ConnectionValue *val);
     int PlayFilter(RtcSession *s, PlayValue *val);
     int PublishFilter(RtcSession *s, PublishValue *val);
     int CloseStreamFilter(RtcSession *s, CloseStreamValue *val);
@@ -62,7 +61,6 @@ protected:
 
 // Filter listener
 public:
-    virtual int OnConnection(RtcSession *s, ConnectionValue *val) override;
     virtual int OnPlay(RtcSession *s, PlayValue *val) override;
     virtual int OnPublish(RtcSession *s, PublishValue *val) override;
     virtual int OnCloseStream(RtcSession *s, CloseStreamValue *val) override;
