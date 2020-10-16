@@ -1,9 +1,9 @@
-#define PMS_CLASS "HttpServer"
+#define PMS_CLASS "pingos::HttpServer"
 #include <string>
 #include "Master/Log.hpp"
 #include "Master/HttpServer.hpp"
 
-namespace Master {
+namespace pingos {
 HttpServer::HttpServer(NetServer::Listener *listener)
 {
     m_listener = listener;
@@ -14,14 +14,14 @@ HttpServer::~HttpServer()
 
 }
 
-int HttpServer::StartHttp(int port)
+int HttpServer::Accept(uint16_t port)
 {
     us_socket_context_options_t options;
-    m_httpPort = port;
-    m_httpApp = new uWS::App(options);
-    m_httpApp->post("/*", [this](uWS::HttpResponse<false> *res, uWS::HttpRequest *req) {
+    m_port = port;
+    m_app = new uWS::App(options);
+    m_app->post("/*", [this](uWS::HttpResponse<false> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
-            this->OnAborted(res);
+            this->OnDisconnect(res);
         });
 
         res->onData([this, res, req](std::string_view chunk, bool isEnd) {
@@ -31,7 +31,7 @@ int HttpServer::StartHttp(int port)
         });
     });
 
-    m_httpApp->listen(port, [port](us_listen_socket_t *listenSocket) {
+    m_app->listen(port, [port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
             PMS_INFO("Listening on port {}", port);
         } else {
@@ -42,20 +42,20 @@ int HttpServer::StartHttp(int port)
     return 0;
 }
 
-int HttpServer::StartHttp(int port, std::string keyfile, std::string certfile, std::string passphrase)
+int HttpServer::Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase)
 {
-    m_httpsPort = port;
+    m_sslPort = port;
 
     us_socket_context_options_t opt;
     opt.key_file_name = keyfile.c_str();
     opt.cert_file_name = certfile.c_str();
     opt.passphrase = passphrase.c_str();
 
-    m_httpsApp = new uWS::SSLApp(opt);
+    m_sslApp = new uWS::SSLApp(opt);
 
-    m_httpsApp->post("/*", [this](uWS::HttpResponse<true> *res, uWS::HttpRequest *req) {
+    m_sslApp->post("/*", [this](uWS::HttpResponse<true> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
-            this->OnAborted(res);
+            this->OnDisconnect(res);
         });
 
         res->onData([this, res, req](std::string_view chunk, bool isEnd) {
@@ -65,7 +65,7 @@ int HttpServer::StartHttp(int port, std::string keyfile, std::string certfile, s
         });
     });
 
-    m_httpsApp->listen(port, [port](us_listen_socket_t *listenSocket) {
+    m_sslApp->listen(port, [port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
             PMS_ERROR("Listening on port {} success", port);
         } else {
@@ -76,19 +76,24 @@ int HttpServer::StartHttp(int port, std::string keyfile, std::string certfile, s
     return 0;
 }
 
-int HttpServer::ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_t nsPayloadLen)
+int HttpServer::Disconnect(NetConnection *nc)
 {
-    if (request == nullptr || request->GetConnectionHandle() == nullptr) {
+    return 0;
+}
+
+int HttpServer::ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t nsPayloadLen)
+{
+    if (nc == nullptr || nc->GetConnectionHandler() == nullptr) {
         return -1;
     }
 
-    if (request->IsSsl()) {
-        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) request->GetConnectionHandle();
+    if (nc->IsSsl()) {
+        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) nc->GetConnectionHandler();
 
         std::string content((const char *)nsPayload, nsPayloadLen);
         res->end(content);
     } else {
-        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) request->GetConnectionHandle();
+        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) nc->GetConnectionHandler();
 
         std::string content((const char *)nsPayload, nsPayloadLen);
         res->end(content);
@@ -97,18 +102,18 @@ int HttpServer::ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_
     return 0;
 }
 
-int HttpServer::ReplyString(NetRequest *request, std::string data)
+int HttpServer::ReplyString(NetConnection *nc, std::string data)
 {
-    if (request == nullptr || request->GetConnectionHandle() == nullptr) {
+    if (nc == nullptr || nc->GetConnectionHandler() == nullptr) {
         return -1;
     }
 
-    if (request->IsSsl()) {
-        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) request->GetConnectionHandle();
+    if (nc->IsSsl()) {
+        uWS::HttpResponse<true> *res = (uWS::HttpResponse<true>*) nc->GetConnectionHandler();
 
         res->end(data);
     } else {
-        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) request->GetConnectionHandle();
+        uWS::HttpResponse<false> *res = (uWS::HttpResponse<false>*) nc->GetConnectionHandler();
 
         res->end(data);
     }
@@ -118,37 +123,33 @@ int HttpServer::ReplyString(NetRequest *request, std::string data)
 
 int HttpServer::OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl)
 {
-    NetRequest *request = this->FetchRequest(handle, ssl);
+    NetConnection *nc = this->FetchConnection(handle, ssl);
 
-    if (request == nullptr) {
-        PMS_ERROR("Fetch request failed.");
+    if (nc == nullptr) {
+        PMS_ERROR("Fetch nc failed.");
         return -1;
     }
 
-    request->Padding(chunk);
+    nc->Padding(chunk);
 
     if (isEnd) {
-        if (request->ParseUri(req->getUrl()) != 0) {
-            PMS_ERROR("Failed to parse uri {}", req->getUrl());
-            return -1;
-        }
-
         if (m_listener) {
-            m_listener->OnMessage(request);
+            m_listener->OnMessage(nc);
         }
     }
 
     return 0;
 }
 
-void HttpServer::OnAborted(void *handle)
+void HttpServer::OnDisconnect(void *handle)
 {
-    auto it = m_requestMap.find(handle);
-    if (it != m_requestMap.end() && this->m_listener) {
-        m_listener->OnAborted(it->second);
+    auto it = m_ncMap.find(handle);
+    if (it != m_ncMap.end() && this->m_listener) {
+        m_listener->OnDisconnect(it->second);
+        m_listener = nullptr;
     }
 
-    this->RemoveRequest(handle);
+    this->RecycleConnection(handle);
 }
 
 }

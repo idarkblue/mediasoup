@@ -23,7 +23,7 @@
     #define _PMS_LOG_ARG PMS_CLASS, __FUNCTION__
 #endif
 
-namespace Master {
+namespace pingos {
 
 class Log {
 

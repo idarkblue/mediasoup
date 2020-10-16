@@ -5,30 +5,27 @@
 #include <string>
 #include <string_view>
 
-namespace Master {
+namespace pingos {
 
-class NetRequest {
+class NetConnection {
 public:
-    NetRequest();
-    NetRequest(bool ssl, void *handle, void* param);
-    virtual ~NetRequest();
+    NetConnection();
+    NetConnection(bool ssl, void *handler, void* param);
+    virtual ~NetConnection();
 
 public:
-    void Reset(bool ssl, void *handle, void* param);
+    void Reset(bool ssl, void *handler, void* param);
     void Clear();
 
 public:
-    int ParseUri(std::string_view uri);
+    void SetUri(std::string uri);
     std::string GetUri();
-    std::string GetMethod();
-    std::string GetServer();
-    std::string GetApp();
-    std::string GetStreamName();
 
 public:
     int Padding(std::string_view data);
     const char *GetData();
     int GetDataSize();
+    std::string PopData();
 
 public:
     virtual int ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen);
@@ -36,7 +33,11 @@ public:
 
 public:
     bool IsSsl();
-    void *GetConnectionHandle();
+    void *GetConnectionHandler();
+
+public:
+    void SetSession(void *session);
+    void* GetSession();
 
 private:
     std::string m_uri { "" };
@@ -44,10 +45,7 @@ private:
     void *m_handle { nullptr };
     void *m_param { nullptr };
     std::string m_receivedData { "" };
-    std::string m_method { "" };
-    std::string m_server { "" };
-    std::string m_app { "" };
-    std::string m_streamName { "" };
+    void *m_session { nullptr };
 };
 
 class NetServer {
@@ -55,8 +53,8 @@ class NetServer {
 public:
     class Listener {
     public:
-        virtual int OnMessage(NetRequest *request) = 0;
-        virtual void OnAborted(NetRequest *request) = 0;
+        virtual int OnMessage(NetConnection *nc) = 0;
+        virtual void OnDisconnect(NetConnection *nc) = 0;
     };
 
 public:
@@ -66,20 +64,28 @@ public:
     void SetListener(NetServer::Listener *listener);
 
 public:
-    virtual int ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_t nsPayloadLen) = 0;
-    virtual int ReplyString(NetRequest *request, std::string data) = 0;
+    virtual int Accept(uint16_t port) = 0;
+    virtual int Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase) = 0;
+    virtual int Disconnect(NetConnection *nc) = 0;
+    virtual int ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t nsPayloadLen) = 0;
+    virtual int ReplyString(NetConnection *nc, std::string data) = 0;
 
 protected:
-    NetRequest* GetRequest();
-    void PutRequest(NetRequest *msg);
+    int AddConnection(void *handler, NetConnection *nc);
+    void RemoveConnection(void *handler);
 
-    void RemoveRequest(void *handle);
-    NetRequest* FetchRequest(void *handle, bool ssl);
+    NetConnection* GetConnection();
+    void PutConnection(NetConnection *msg);
+
+    void RecycleConnection(void *handler);
+    NetConnection* FetchConnection(void *handler, bool ssl);
+
+    NetConnection* FindConnection(void *handler, bool ssl);
 
 protected:
-    std::map<void *, NetRequest *> m_requestMap;
-    std::list<NetRequest*>         m_freeRequests;
-    Listener                      *m_listener { nullptr };
+    std::map<void *, NetConnection *> m_ncMap;
+    std::list<NetConnection*>         m_ncFree;
+    Listener                         *m_listener { nullptr };
 };
 
 }

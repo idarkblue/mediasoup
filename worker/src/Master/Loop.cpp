@@ -1,6 +1,6 @@
 #include "Master/Loop.hpp"
 
-namespace Master {
+namespace pingos {
 
 void Loop::ClassInit()
 {

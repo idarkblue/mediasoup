@@ -1,9 +1,9 @@
-#define PMS_CLASS "Master::PipeServer"
+#define PMS_CLASS "pingos::PipeServer"
 
 #include "Master/PipeServer.hpp"
 #include "Master/Log.hpp"
 
-namespace Master {
+namespace pingos {
 
 uv_loop_t *m_loop = nullptr;
 
@@ -89,7 +89,7 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
         role = ::UnixStreamSocket::Role::CONSUMER;
     }
 
-    auto client = new Master::UnixStreamSocket(pipe, this, role);
+    auto client = new pingos::UnixStreamSocket(pipe, this, role);
 
     if (m_listener) {
         m_listener->OnChannelAccept(this, client);
@@ -98,7 +98,7 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
     m_clients.push_back(client);
 }
 
-void PipeServer::OnChannelMessage(Master::UnixStreamSocket* channel, std::string_view &payload)
+void PipeServer::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload)
 {
     if (m_listener) {
         m_listener->OnChannelRecv(this, channel, payload);
@@ -107,7 +107,7 @@ void PipeServer::OnChannelMessage(Master::UnixStreamSocket* channel, std::string
     PMS_INFO("{}", payload);
 }
 
-void PipeServer::OnChannelClosed(Master::UnixStreamSocket* channel)
+void PipeServer::OnChannelClosed(pingos::UnixStreamSocket* channel)
 {
     if (m_listener) {
         m_listener->OnChannelClosed(this, channel);

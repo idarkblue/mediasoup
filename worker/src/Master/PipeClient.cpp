@@ -1,9 +1,9 @@
-#define PMS_CLASS "PipeClient"
+#define PMS_CLASS "pingos::PipeClient"
 
 #include "Master/PipeClient.hpp"
 #include "Master/Log.hpp"
 
-namespace Master {
+namespace pingos {
 
 static void onPipeConnection(uv_connect_t* req, int status)
 {

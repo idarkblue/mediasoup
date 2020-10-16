@@ -14,7 +14,7 @@ extern "C"
 }
 /* Static methods for UV callbacks. */
 
-namespace Master {
+namespace pingos {
 
 // netstring length for a 4194304 bytes payload.
 static constexpr size_t NsMessageMaxLen{ 4194313 };

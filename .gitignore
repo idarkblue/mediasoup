@@ -40,4 +40,4 @@
 
 *.code-workspace
 
-./worker/logs
+logs/

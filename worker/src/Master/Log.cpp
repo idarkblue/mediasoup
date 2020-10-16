@@ -1,9 +1,9 @@
-#define PMS_CLASS "Log"
+#define PMS_CLASS "pingos::Log"
 
 #include <iostream>
 #include "Master/Log.hpp"
 
-namespace Master {
+namespace pingos {
 
 std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> Log::consolSink;
 std::shared_ptr<spdlog::sinks::basic_file_sink_mt> Log::fileSink;

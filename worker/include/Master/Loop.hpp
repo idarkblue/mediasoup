@@ -4,7 +4,7 @@
 #include "DepLibUV.hpp"
 #include "App.h"
 
-namespace Master {
+namespace pingos {
 
 class Loop {
 public:

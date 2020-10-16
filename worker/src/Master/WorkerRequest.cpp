@@ -1,6 +1,6 @@
 #include "Master/WorkerRequest.hpp"
 
-namespace Master {
+namespace pingos {
 
 static std::string JsonStaticStringId("id");
 static std::string JsonStaticStringMethod("method");

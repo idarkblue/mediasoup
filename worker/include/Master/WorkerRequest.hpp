@@ -5,7 +5,7 @@
 
 using json = nlohmann::json;
 
-namespace Master {
+namespace pingos {
 
 class ProcessRequest {
 public:

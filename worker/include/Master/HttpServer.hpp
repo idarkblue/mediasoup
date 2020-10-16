@@ -7,7 +7,7 @@
 #include "App.h"
 #include "NetServer.hpp"
 
-namespace Master {
+namespace pingos {
 
 class HttpServer : public NetServer {
 
@@ -16,22 +16,23 @@ public:
     virtual ~HttpServer();
 
     void SetListener(Listener *listener);
-    int StartHttp(int port);
-    int StartHttp(int port, std::string keyfile, std::string certfile, std::string passphrase);
 
     int OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl);
-    void OnAborted(void *handle);
+    void OnDisconnect(void *handle);
 
 public:
-    virtual int ReplyBinary(NetRequest *request, const uint8_t *nsPayload, size_t nsPayloadLen) override;
-    virtual int ReplyString(NetRequest *request, std::string data) override;
+    virtual int Accept(uint16_t port) override;
+    virtual int Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase) override;
+    virtual int Disconnect(NetConnection *nc) override;
+    virtual int ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t nsPayloadLen) override;
+    virtual int ReplyString(NetConnection *nc, std::string data) override;
 
 private:
-    int m_httpPort  { 80 };
-    int m_httpsPort { 443 };
+    int m_port  { 80 };
+    int m_sslPort { 443 };
 
-    uWS::App        *m_httpApp  { nullptr };
-    uWS::SSLApp     *m_httpsApp { nullptr };
+    uWS::App        *m_app  { nullptr };
+    uWS::SSLApp     *m_sslApp { nullptr };
 };
 
 }

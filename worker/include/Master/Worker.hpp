@@ -5,20 +5,19 @@
 #include "PipeServer.hpp"
 #include "PipeClient.hpp"
 #include "UnixStreamSocket.hpp"
-#include "WorkerRequest.hpp"
 
 extern "C" {
     #include <uv.h>
 }
 
-namespace Master {
+namespace pingos {
 
-class WorkerProcess : public PipeServer::Listener
+class Worker : public PipeServer::Listener
 {
 public:
     class Listener {
     public:
-        virtual void OnWorkerProcessExited(WorkerProcess *wp) = 0;
+        virtual void OnWorkerExited(Worker *w) = 0;
     };
 
 public:
@@ -26,7 +25,7 @@ public:
         uv_loop_t           *loop;
         std::string          file;
         Listener            *listener;
-        int                  slot;
+        uint32_t             slot;
     };
 
 public:
@@ -36,22 +35,18 @@ private:
     static std::string pipePath;
 
 public:
-    WorkerProcess(Options &opt);
-    virtual ~WorkerProcess();
+    Worker(Options &opt);
+    virtual ~Worker();
 
-    int Run();
     void SetUnixStreamSocket(std::shared_ptr<UnixStreamSocket> channel);
     int SetListener(Listener *listener);
+    int Spawn();
 
 public:
     void OnWorkerExited(uv_process_t *req, int64_t status, int termSignal);
 
 protected:
     int SetPipe();
-    int Spawn();
-
-protected:
-    void ProcessMessage(std::string_view &message);
 
 // PipeServer listener
 public:
@@ -59,15 +54,12 @@ public:
     virtual void OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel) override;
     virtual void OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload) override;
 
-public:
-    int CreateRouter(const char *routerId);
-    int CreateWebRtcTransport();
-    int CreatePlainTransport();
-    int CreateProducer();
-    int CreateConsumer();
+protected:
+    int ChannelSend(std::string data);
 
-private:
-    int Send2Process(ProcessRequest *request);
+public:
+    virtual void ReceiveChannelMessage(std::string_view &payload) = 0;
+    virtual int ReceiveMasterMessage(std::string &payload) = 0;
 
 private:
     uv_process_t         m_process;

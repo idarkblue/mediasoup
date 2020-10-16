@@ -10,7 +10,7 @@ extern "C"
     #include "uv.h"
 }
 
-namespace Master {
+namespace pingos {
 class PipeServer;
  
 class PipeServer: public UnixStreamSocket::Listener {
@@ -33,8 +33,8 @@ public:
     virtual ~PipeServer();
 
 public:
-    virtual void OnChannelMessage(Master::UnixStreamSocket* channel, std::string_view &payload) override;
-    virtual void OnChannelClosed(Master::UnixStreamSocket* channel) override;
+    virtual void OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload) override;
+    virtual void OnChannelClosed(pingos::UnixStreamSocket* channel) override;
 
 public:
     int Listen(std::string pipeName);

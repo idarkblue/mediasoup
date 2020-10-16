@@ -1,14 +1,14 @@
-#define PMS_CLASS "Master::WorkerProcess"
+#define PMS_CLASS "pingos::Worker"
 #include "Master/Log.hpp"
-#include "Master/WorkerProcess.hpp"
+#include "Master/Worker.hpp"
 
-namespace Master {
+namespace pingos {
 
 static char MEDIASOUP_VERSION_STRING[] = "MEDIASOUP_VERSION=3.1.15";
-char **WorkerProcess::processArgs = nullptr;
-std::string WorkerProcess::pipePath = "pms.sock";
+char **Worker::processArgs = nullptr;
+std::string Worker::pipePath = "pms.sock";
 
-void WorkerProcess::ClassInit(const char **args, const char *pipePath)
+void Worker::ClassInit(const char **args, const char *pipePath)
 {
     int    count = 0;
     size_t length = 0;
@@ -25,18 +25,18 @@ void WorkerProcess::ClassInit(const char **args, const char *pipePath)
         snprintf(processArgs[i], length + 1, "%s", args[i]);
     }
 
-    WorkerProcess::pipePath = pipePath;
+    Worker::pipePath = pipePath;
 }
 
-WorkerProcess::WorkerProcess(Options &opt)
+Worker::Worker(Options &opt)
 {
     m_opt = opt;
 
-    m_pipeFile = WorkerProcess::pipePath + ".channel." + std::to_string(opt.slot);
-    m_pipePayloadFile = WorkerProcess::pipePath + ".payload." + std::to_string(opt.slot);
+    m_pipeFile = Worker::pipePath + ".channel." + std::to_string(opt.slot);
+    m_pipePayloadFile = Worker::pipePath + ".payload." + std::to_string(opt.slot);
 }
 
-WorkerProcess::~WorkerProcess()
+Worker::~Worker()
 {
     delete m_pipeClient[0];
     delete m_pipeClient[1];
@@ -47,7 +47,7 @@ WorkerProcess::~WorkerProcess()
     delete m_pipeServer[1];
 }
 
-int WorkerProcess::SetPipe()
+int Worker::SetPipe()
 {
 // channel
     m_pipeServer[0] = new PipeServer(m_opt.loop);
@@ -74,16 +74,10 @@ int WorkerProcess::SetPipe()
     return 0;
 }
 
-int WorkerProcess::Run()
+int Worker::Spawn()
 {
     this->SetPipe();
-    this->Spawn();
 
-    return 0;
-}
-
-int WorkerProcess::Spawn()
-{
     static char *env[] = {
         MEDIASOUP_VERSION_STRING,
         nullptr
@@ -115,7 +109,7 @@ int WorkerProcess::Spawn()
     m_options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
 
     m_options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
-        auto me = static_cast<Master::WorkerProcess*>(req->data);
+        auto me = static_cast<Worker*>(req->data);
         me->OnWorkerExited(req, status, termSignal);
     };
     m_options.file = m_opt.file.c_str();
@@ -131,23 +125,16 @@ int WorkerProcess::Spawn()
     return 0;
 }
 
-void WorkerProcess::OnWorkerExited(uv_process_t *req, int64_t status, int termSignal)
+void Worker::OnWorkerExited(uv_process_t *req, int64_t status, int termSignal)
 {
     PMS_ERROR("Worker process[{}] exited\r\n", req->pid);
     if (m_opt.listener) {
-        m_opt.listener->OnWorkerProcessExited(this);
+        m_opt.listener->OnWorkerExited(this);
     }
 }
 
-void WorkerProcess::ProcessMessage(std::string_view &message)
+void Worker::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
 {
-
-}
-
-void WorkerProcess::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
-{
-//    PMS_INFO("accept ...");
-
     if (ps == m_pipeServer[0]) {
         if (channel->GetRole() == ::UnixStreamSocket::Role::PRODUCER) {
             m_channel[0] = channel;
@@ -165,18 +152,18 @@ void WorkerProcess::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
     }
 }
 
-void WorkerProcess::OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel)
+void Worker::OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel)
 {
     
 }
 
-void WorkerProcess::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload)
+void Worker::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload)
 {
     switch (payload[0]) {
         // 123 = '{' (a Channel JSON messsage).
         case 123:
             PWS_DEBUG("Channel message: {}", payload);
-            this->ProcessMessage(payload);
+            this->ReceiveChannelMessage(payload);
             break;
 
         // 68 = 'D' (a debug log).
@@ -211,40 +198,12 @@ void WorkerProcess::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std
     }
 }
 
-int WorkerProcess::CreateRouter(const char *routerId)
+int Worker::ChannelSend(std::string data)
 {
-    CreateRouterRequest request(routerId);
-
-    this->Send2Process(&request);
-
-    return 0;
-}
-
-int WorkerProcess::CreateWebRtcTransport()
-{
-    return 0;
-}
-
-int WorkerProcess::CreatePlainTransport()
-{
-    return 0;
-}
-
-int WorkerProcess::CreateProducer()
-{
-    return 0;
-}
-
-int WorkerProcess::CreateConsumer()
-{
-    return 0;
-}
-
-int WorkerProcess::Send2Process(ProcessRequest *request)
-{
-    std::string message = request->ToString();
-
-    m_channel[0]->SendString(message);
+    PMS_DEBUG("Send Data: {}", data);
+    if (m_channel[0]) {
+        m_channel[0]->SendString(data);
+    }
 
     return 0;
 }

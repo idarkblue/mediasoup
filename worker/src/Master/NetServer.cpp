@@ -1,25 +1,25 @@
 #include "Master/NetServer.hpp"
 
-namespace Master {
+namespace pingos {
 
-NetRequest::NetRequest():
+NetConnection::NetConnection():
     m_ssl(false), m_handle(nullptr), m_param(nullptr)
 {
 
 }
 
-NetRequest::NetRequest(bool ssl, void *handle, void* param):
-    m_ssl(ssl), m_handle(handle), m_param(param)
+NetConnection::NetConnection(bool ssl, void *handler, void* param):
+    m_ssl(ssl), m_handle(handler), m_param(param)
 {
 
 }
 
-NetRequest::~NetRequest()
+NetConnection::~NetConnection()
 {
 
 }
 
-int NetRequest::ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen)
+int NetConnection::ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen)
 {
     if (m_param == nullptr) {
         return -1;
@@ -30,7 +30,7 @@ int NetRequest::ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen)
     return ns->ReplyBinary(this, nsPayload, nsPayloadLen);
 }
 
-int NetRequest::ReplyString(std::string data)
+int NetConnection::ReplyString(std::string data)
 {
     if (m_param == nullptr) {
         return -1;
@@ -41,15 +41,15 @@ int NetRequest::ReplyString(std::string data)
     return ns->ReplyString(this, data);
 }
 
-void NetRequest::Reset(bool ssl, void *handle, void* param)
+void NetConnection::Reset(bool ssl, void *handler, void* param)
 {
     m_ssl = ssl;
-    m_handle = handle;
+    m_handle = handler;
     m_param = param;
     m_receivedData.clear();
 }
 
-void NetRequest::Clear()
+void NetConnection::Clear()
 {
     m_ssl = false;
     m_handle = nullptr;
@@ -57,96 +57,63 @@ void NetRequest::Clear()
     m_receivedData.clear();
 }
 
-int NetRequest::Padding(std::string_view data)
+int NetConnection::Padding(std::string_view data)
 {
     m_receivedData += data;
 
     return 0;
 }
 
-int NetRequest::ParseUri(std::string_view uri)
+void NetConnection::SetUri(std::string uri)
 {
     m_uri = uri;
-
-    auto start = uri.find_first_not_of('/');
-
-    if (start == std::string::npos) {
-        return -1;
-    }
-
-    auto tmp = uri.substr(start);
-
-    auto pos = tmp.find('/');
-
-    auto app = tmp.substr(0, pos);
-
-    tmp = tmp.substr(pos + 1);
-
-    pos = tmp.find('/');
-    if (pos == std::string::npos) {
-        return -1;
-    }
-
-    auto streamName = tmp.substr(0, pos);
-
-    auto method = tmp.substr(pos + 1);
-
-    if (app.empty() || streamName.empty() || method.empty()) {
-        return -1;
-    }
-
-    m_method     = method;
-    m_app        = app;
-    m_streamName = streamName;
-
-    return 0;
 }
 
-std::string NetRequest::GetUri()
+std::string NetConnection::GetUri()
 {
     return m_uri;
 }
 
-std::string NetRequest::GetMethod()
-{
-    return m_method;
-}
-
-std::string NetRequest::GetServer()
-{
-    return m_server;
-}
-
-std::string NetRequest::GetApp()
-{
-    return m_app;
-}
-
-std::string NetRequest::GetStreamName()
-{
-    return m_streamName;
-}
-
-const char *NetRequest::GetData()
+const char *NetConnection::GetData()
 {
     return m_receivedData.c_str();
 }
 
-int NetRequest::GetDataSize()
+int NetConnection::GetDataSize()
 {
     return m_receivedData.size();
 }
-bool NetRequest::IsSsl()
+
+std::string NetConnection::PopData()
+{
+    std::string data = m_receivedData;
+
+    m_receivedData.clear();
+
+    return data;
+}
+
+bool NetConnection::IsSsl()
 {
     return m_ssl;
 }
 
-void* NetRequest::GetConnectionHandle()
+void* NetConnection::GetConnectionHandler()
 {
     return m_handle;
 }
 
-// class NetRequest end
+void NetConnection::SetSession(void *session)
+{
+    m_session = session;
+}
+
+void* NetConnection::GetSession()
+{
+    return m_session;
+}
+
+// class NetConnection end
 
 // class NetServer begin
 NetServer::NetServer()
@@ -164,57 +131,84 @@ void NetServer::SetListener(NetServer::Listener *listener)
     m_listener = listener;
 }
 
-NetRequest* NetServer::GetRequest()
+int NetServer::AddConnection(void *handler, NetConnection *nc)
 {
-    if (m_freeRequests.size() == 0) {
-        return new NetRequest();
+    auto it = m_ncMap.find(handler);
+    if (it != m_ncMap.end()) {
+        return -1;
     }
 
-    NetRequest *msg = m_freeRequests.front();
+    m_ncMap[handler] = nc;
 
-    m_freeRequests.pop_front();
+    return 0;
+}
+
+void NetServer::RemoveConnection(void *handler)
+{
+    m_ncMap.erase(handler);
+}
+
+NetConnection* NetServer::GetConnection()
+{
+    if (m_ncFree.size() == 0) {
+        return new NetConnection();
+    }
+
+    NetConnection *msg = m_ncFree.front();
+
+    m_ncFree.pop_front();
 
     return msg;
 
 }
 
-void NetServer::PutRequest(NetRequest *msg)
+void NetServer::PutConnection(NetConnection *msg)
 {
     msg->Clear();
-    m_freeRequests.push_back(msg);
+    m_ncFree.push_back(msg);
 }
 
-void NetServer::RemoveRequest(void *handle)
+void NetServer::RecycleConnection(void *handler)
 {
-    auto it = m_requestMap.find(handle);
-    if (it == m_requestMap.end()) {
+    auto it = m_ncMap.find(handler);
+    if (it == m_ncMap.end()) {
         return;
     }
 
-    NetRequest *request = it->second;
+    NetConnection *nc = it->second;
 
-    if (request != nullptr && m_listener) {
-        m_listener->OnAborted(request);
+    if (nc != nullptr && m_listener) {
+        m_listener->OnDisconnect(nc);
     }
 
-    m_requestMap.erase(it);
+    m_ncMap.erase(it);
 
-    this->PutRequest(request);
+    this->PutConnection(nc);
 }
 
-NetRequest* NetServer::FetchRequest(void *handle, bool ssl)
+NetConnection* NetServer::FetchConnection(void *handler, bool ssl)
 {
-    auto it = m_requestMap.find(handle);
-    if (it != m_requestMap.end()) {
+    auto it = m_ncMap.find(handler);
+    if (it != m_ncMap.end()) {
         return it->second;
     }
 
-    auto request = this->GetRequest();
-    m_requestMap[handle] = request;
+    auto nc = this->GetConnection();
+    m_ncMap[handler] = nc;
 
-    request->Reset(ssl, handle, this);
+    nc->Reset(ssl, handler, this);
 
-    return request;
+    return nc;
+}
+
+NetConnection* NetServer::FindConnection(void *handler, bool ssl)
+{
+    auto it = m_ncMap.find(handler);
+    if (it == m_ncMap.end()) {
+        return nullptr;
+    }
+
+    return it->second;
 }
 
 }

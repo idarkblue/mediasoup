@@ -3,9 +3,9 @@
 #include "Defines.hpp"
 #include "handles/UnixStreamSocket.hpp"
 
-namespace Master {
+namespace pingos {
 
-class WorkerProcess;
+class Worker;
 
 class UnixStreamSocket : public ::UnixStreamSocket
 {
@@ -13,8 +13,8 @@ public:
     class Listener
     {
     public:
-        virtual void OnChannelMessage(Master::UnixStreamSocket* channel, std::string_view &payload) = 0;
-        virtual void OnChannelClosed(Master::UnixStreamSocket* channel) = 0;
+        virtual void OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload) = 0;
+        virtual void OnChannelClosed(pingos::UnixStreamSocket* channel) = 0;
     };
 
 public:

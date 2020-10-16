@@ -336,15 +336,24 @@
       'sources':
       [
         # C++ source files.
-        'src/Master/LiveStream.cpp',
+        'src/Master/Configuration.cpp',
+        'src/Master/RtcServer.cpp',
+        'src/Master/RtcMaster.cpp',
+        'src/Master/RtcWorker.cpp',
+        'src/Master/RtcStream.cpp',
+        'src/Master/RtcSession.cpp',
+        'src/Master/RtcRequest.cpp',
+        'src/Master/SdpInfo.cpp',
+        'src/Master/libsdptransform/grammar.cpp',
+        'src/Master/libsdptransform/writer.cpp',
+        'src/Master/libsdptransform/parser.cpp',
         'src/Master/HttpServer.cpp',
-        'src/Master/MasterProcess.cpp',
+        'src/Master/WssServer.cpp',
         'src/Master/NetServer.cpp',
-        'src/Master/WorkerProcess.cpp',
+        'src/Master/Master.cpp',
+        'src/Master/Worker.cpp',
         'src/Master/WorkerRequest.cpp',
-        'src/Master/WebRtcService.cpp',
         'src/Master/UnixStreamSocket.cpp',
-        'src/Master/Filter.cpp',
         'src/Master/Log.cpp',
         'src/Master/Loop.cpp',
         'src/Master/PipeServer.cpp',
@@ -363,7 +372,7 @@
         [ 'OS == "mac"', {
           'xcode_settings':{
             'OTHER_CFLAGS': [ '-DLIBUS_USE_LIBUV', '-DLIBUS_USE_OPENSSL' ],
-            'WARNING_CFLAGS': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-newline-eof' ],
+            'WARNING_CFLAGS': [ '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-newline-eof', '-Wno-missing-field-initializers' ],
             'OTHER_CPLUSPLUSFLAGS' : [ '-std=c++17', '-DLIBUS_USE_LIBUV', '-DLIBUS_USE_OPENSSL' ],
             'OTHER_LDFLAGS': [ '-lz' ]
           }

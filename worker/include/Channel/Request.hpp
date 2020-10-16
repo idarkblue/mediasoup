@@ -70,7 +70,7 @@ namespace Channel
 			RTP_OBSERVER_REMOVE_PRODUCER
 		};
 
-	private:
+//	private:
 		static std::unordered_map<std::string, MethodId> string2MethodId;
 
 	public:

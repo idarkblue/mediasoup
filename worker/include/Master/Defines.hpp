@@ -1,8 +1,9 @@
-#ifndef _DEFINES_HPP_INCLUDE_
-#define _DEFINES_HPP_INCLUDE_
+#pragma once
 
 #include <string>
 #include <json.hpp>
+
+#include "MediaSoupErrors.hpp"
 
 using json = nlohmann::json;
 
@@ -10,19 +11,25 @@ using json = nlohmann::json;
 #define MAX_PATH 65535
 #endif
 
-enum MessageSourceType {
-    MS_HTTP,
-    MS_CHILD_PIPE
-};
+#define JSON_READ_VALUE_ASSERT(_json_object_, _key_, _type_, _val_)             \
+    if ((_json_object_).find(_key_) == (_json_object_).end()) {                     \
+        PMS_ERROR("Cannot find {}", _key_);                                     \
+        return -1;                                                              \
+    } else {                                                                    \
+        _val_ = (_json_object_)[_key_].get<_type_>();                             \
+    }
 
-struct ConnectionValue {};
-struct PlayValue {};
-struct PublishValue {};
-struct CloseStreamValue {};
-struct RtcSession {
-    std::string daemon;
-    std::string app;
-    std::string name;
-};
+#define JSON_READ_VALUE_DEFAULT(_json_object_, _key_, _type_, _val_, _default_) \
+    if ((_json_object_).find(_key_) == (_json_object_).end()) {                     \
+        PMS_WARN("Cannot find {}, set default {}", _key_, _default_);           \
+        _val_ = _default_;                                                      \
+    } else {                                                                    \
+        _val_ = (_json_object_)[_key_].get<_type_>();                             \
+    }
 
-#endif
+#define JSON_READ_VALUE_THROW(_json_object_, _key_, _type_, _val_)              \
+    if ((_json_object_).find(_key_) == (_json_object_).end()) {                     \
+        MS_THROW_ERROR("missing %s", std::string(_key_).c_str());               \
+    } else {                                                                    \
+        _val_ = (_json_object_)[_key_].get<_type_>();                             \
+    }
