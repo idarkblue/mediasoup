@@ -14,8 +14,6 @@ public:
     WssServer(Listener *listener = nullptr);
     virtual ~WssServer();
 
-    void SetListener(Listener *listener);
-
 protected:
     void OnListen(us_listen_socket_t *listenSocket);
     void OnOpen(void *c, uWS::HttpRequest *req, bool ssl);

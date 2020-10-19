@@ -41,19 +41,19 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    pingos::WssServer ns;
+    pingos::WssServer ws;
     if (pingos::Configuration::websocket.ssl) {
-        ns.Accept(pingos::Configuration::websocket.port,
+        ws.Accept(pingos::Configuration::websocket.port,
             pingos::Configuration::websocket.keyFile,
             pingos::Configuration::websocket.certFile,
             pingos::Configuration::websocket.passPhrase);
     } else {
-        ns.Accept(pingos::Configuration::websocket.port);
+        ws.Accept(pingos::Configuration::websocket.port);
     }
 
     pingos::RtcMaster master;
 
-    pingos::RtcServer rtc(&ns, &master);
+    pingos::RtcServer rtc(&ws, &master);
 
     pingos::Master::Options opt = {
         .execDir = pingos::Configuration::master.execPath,

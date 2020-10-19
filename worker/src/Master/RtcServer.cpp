@@ -80,20 +80,19 @@ int RtcServer::OnMessage(NetConnection *nc)
     std::string reason = "";
 
     RtcRequest request(nc);
+    json jsonObject;
 
     try {
-        json jsonObject;
+        jsonObject = json::parse(nc->PopData());
+    } catch (const json::parse_error &error) {
+        reason = error.what();
+        PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());
+        goto _error;
+    }
 
-        try {
-            jsonObject = json::parse(nc->PopData());
+    request.Parse(jsonObject);
 
-            request.Parse(jsonObject);
-        } catch (const json::parse_error &error) {
-            reason = error.what();
-            PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());
-            goto _error;
-        }
-
+    try {
         switch (request.methodId) {
             case RtcRequest::MethodId::STREAM_PUBLISH:
             this->PublishStream(&request);
@@ -158,13 +157,13 @@ std::string& replace_all_distinct(std::string& str, const std::string& old_value
     return str;
 }
 
-void RtcServer::PublishStream(RtcRequest *request)
+int RtcServer::PublishStream(RtcRequest *request)
 {
     auto jsonSdpIt = request->jsonData.find("sdp");
     if (jsonSdpIt == request->jsonData.end()) {
         PMS_ERROR("StreamId[{}] Invalid json data, missing sdp", request->stream);
-        MS_THROW_ERROR("Missing sdp");
-        return;
+//        MS_THROW_ERROR("Missing sdp");
+        return -1;
     }
 
     auto sdp = jsonSdpIt->get<std::string>();
@@ -175,50 +174,52 @@ void RtcServer::PublishStream(RtcRequest *request)
     sdp = replace_all_distinct(sdp, errorStr, rightStr);
 
     RtcSession *rtcSession = nullptr;
-    try {
-        rtcSession = CreateRtcSession(request);
-
-        rtcSession->Publish(sdp);
-    } catch (const MediaSoupError& error) {
-        PMS_ERROR("StreamId[{}] publish failed, Catch error {}", error.what());
-        if (rtcSession) {
-            this->DeleteSession(rtcSession);
-        }
-
-        MS_THROW_ERROR("%s", error.what());
+    rtcSession = CreateRtcSession(request);
+    if (!rtcSession) {
+        PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
+        return -1;
     }
 
-    request->count++;
+    if (rtcSession->Publish(sdp) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] publish failed",
+            rtcSession->GetSessionId(), request->stream);
+        this->DeleteSession(rtcSession);
+
+        return -1;
+    }
 
     Context *ctx = (Context*) rtcSession->GetContext();
 
     ctx->state = Context::State::SETUP;
+
+    request->count++;
+
+    return 0;
 }
 
-void RtcServer::PlayStream(RtcRequest *request)
+int RtcServer::PlayStream(RtcRequest *request)
 {
     auto jsonSdpIt = request->jsonData.find("sdp");
     if (jsonSdpIt == request->jsonData.end()) {
         PMS_ERROR("StreamId[{}] Invalid json data, missing sdp", request->stream);
-        MS_THROW_ERROR("Missing sdp");
-        return;
+//        MS_THROW_ERROR("Missing sdp");
+        return -1;
     }
 
     auto sdp = jsonSdpIt->get<std::string>();
 
     RtcSession *rtcSession = nullptr;
-    try {
-        rtcSession = CreateRtcSession(request);
+    rtcSession = CreateRtcSession(request);
+    if (!rtcSession) {
+        PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
+        return -1;
+    }
 
-        rtcSession->Play(sdp);
-
-    } catch (const MediaSoupError& error) {
-        PMS_ERROR("StreamId[{}] play failed, Catch error {}", error.what());
-        if (rtcSession) {
-            this->DeleteSession(rtcSession);
-        }
-
-        throw;
+    if (rtcSession->Play(sdp)) {
+        this->DeleteSession(rtcSession);
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed",
+            rtcSession->GetSessionId(), request->stream);
+        return -1;
     }
 
     request->count++;
@@ -226,9 +227,11 @@ void RtcServer::PlayStream(RtcRequest *request)
     Context *ctx = (Context*) rtcSession->GetContext();
 
     ctx->state = Context::State::SETUP;
+
+    return 0;
 }
 
-void RtcServer::MuteStream(RtcRequest *request)
+int RtcServer::MuteStream(RtcRequest *request)
 {
     auto *rtcSession = (RtcSession*) request->nc->GetSession();
 
@@ -238,48 +241,32 @@ void RtcServer::MuteStream(RtcRequest *request)
     JSON_READ_VALUE_THROW(request->jsonData, "video", bool, muteVideo);
     JSON_READ_VALUE_THROW(request->jsonData, "audio", bool, muteAudio);
 
-    try {
-        if (muteVideo) {
-            rtcSession->Pause("video");
-        } else {
-            rtcSession->Resume("video");
-        }
+    if (muteVideo) {
+        rtcSession->Pause("video");
+    } else {
+        rtcSession->Resume("video");
+    }
 
-        if (muteAudio) {
-            rtcSession->Pause("audio");
-        } else {
-            rtcSession->Resume("audio");
-        }
-    } catch (const MediaSoupError& error) {
-        PMS_INFO("SessionId[{}] StreamId[{}] Mute failed, catch error: {}",
-        rtcSession->GetSessionId(), request->stream, error.what());
-
-        throw;
-
-        return;
+    if (muteAudio) {
+        rtcSession->Pause("audio");
+    } else {
+        rtcSession->Resume("audio");
     }
 
     PMS_INFO("SessionId[{}] StreamId[{}] Set mute video[{}] audio[{}]",
         rtcSession->GetSessionId(), request->stream, muteVideo, muteAudio);
+    return 0;
 }
 
-void RtcServer::CloseStream(RtcRequest *request)
+int RtcServer::CloseStream(RtcRequest *request)
 {
     auto *rtcSession = (RtcSession*) request->nc->GetSession();
 
-    try {
-        rtcSession->Close();
-    } catch (const MediaSoupError& error) {
-        PMS_INFO("SessionId[{}] StreamId[{}] Closing stream failed, catch error: {}",
-        rtcSession->GetSessionId(), request->stream, error.what());
-
-        throw;
-
-        return;
-    }
-
+    rtcSession->Close();
     PMS_INFO("SessionId[{}] StreamId[{}] Closing",
         rtcSession->GetSessionId(), request->stream);
+
+    return 0;
 }
 
 RtcWorker* RtcServer::FindWorkerByStreamId(std::string streamId)
@@ -308,13 +295,12 @@ std::string RtcServer::SpellSessionId()
 RtcSession* RtcServer::CreateRtcSession(RtcRequest *request)
 {
     auto streamId = request->stream;
-    auto nc       = request->nc;
 
     auto worker = this->FindWorkerByStreamId(streamId);
     if (!worker) {
         PMS_ERROR("StreamId[{}], Worker not found", streamId);
 
-        MS_THROW_ERROR("Worker not found");
+//        MS_THROW_ERROR("Worker not found");
 
         return nullptr;
     }
@@ -329,13 +315,18 @@ RtcSession* RtcServer::CreateRtcSession(RtcRequest *request)
         PMS_ERROR("StreamId[{}], a session can only be created on publish or play",
             streamId);
 
-        MS_THROW_ERROR("A session can only be created on publish or play");
+//        MS_THROW_ERROR("A session can only be created on publish or play");
 
         return nullptr;
     }
 
     auto sessionId = this->SpellSessionId();
     RtcSession *rtcSession = worker->CreateSession(streamId, sessionId, role);
+    if (!rtcSession) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] create session failed.", sessionId, streamId);
+
+        return nullptr;
+    }
 
     rtcSession->AddLocalAddress(Configuration::webrtc.listenIp, Configuration::webrtc.announcedIp);
 
@@ -347,8 +338,7 @@ RtcSession* RtcServer::CreateRtcSession(RtcRequest *request)
 
     rtcSession->AddListener(this);
     rtcSession->SetContext(ctx);
-
-    nc->SetSession(rtcSession);
+    request->nc->SetSession(rtcSession);
 
     PMS_INFO("SessionId[{}] StreamId[{}], RTC Session creation success, session ptr[{}].",
             sessionId, streamId, (void *)rtcSession);
@@ -371,7 +361,15 @@ void RtcServer::DeleteSession(RtcSession *session)
 
     Context *ctx = (Context *) session->GetContext();
 
-    delete ctx;
+    if (ctx) {
+        session->SetContext(nullptr);
+
+        if (ctx->nc) {
+            ctx->nc->SetSession(nullptr);
+        }
+
+        delete ctx;
+    }
 
     worker->DeleteSession(streamId, session->GetSessionId());
 }

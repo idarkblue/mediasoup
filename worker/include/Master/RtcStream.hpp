@@ -14,7 +14,7 @@ public:
 
 public:
     int Join(RtcSession *rtcSession);
-    RtcSession* DeleteSession(std::string sessionId);
+    RtcSession* RemoveSession(std::string sessionId);
 
     RtcSession *GetPublisher();
     RtcSession *GetPlayer(std::string streamId);

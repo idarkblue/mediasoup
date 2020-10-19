@@ -33,8 +33,8 @@ RtcRequest::~RtcRequest()
 void RtcRequest::Parse(json &jsonObject)
 {
 //    JSON_READ_VALUE_THROW(jsonObject, "id", uint64_t, this->id);
-    JSON_READ_VALUE_THROW(jsonObject, "method", std::string, this->method);
-    JSON_READ_VALUE_THROW(jsonObject, "stream", std::string, this->stream);
+    JSON_READ_VALUE_DEFAULT(jsonObject, "method", std::string, this->method, "unknown");
+    JSON_READ_VALUE_DEFAULT(jsonObject, "stream", std::string, this->stream, "unknown");
 
     JSON_READ_VALUE_DEFAULT(jsonObject, "app", std::string, this->app, "pingos");
     JSON_READ_VALUE_DEFAULT(jsonObject, "uid", std::string, this->uid, "pingo");

@@ -258,7 +258,14 @@ std::string SdpInfo::GenerateAnswerSdp(std::vector<IceParameters> iceCandidates,
 // Consumer
 int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters)
 {
-    auto jsonSdp = sdptransform::parse(m_sdp);
+    json jsonSdp;
+    try {
+        jsonSdp = sdptransform::parse(m_sdp);
+    } catch (const json::parse_error &error) {
+        PMS_ERROR("sdp transform failed");
+        return -1;
+    }
+
     return ParseWebRtcTransport(jsonSdp, rtcParameters);
 }
 

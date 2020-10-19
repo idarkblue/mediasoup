@@ -45,10 +45,10 @@ public:
     virtual void OnDisconnect(NetConnection *connection) override;
 
 protected:
-    void PublishStream(RtcRequest *request);
-    void PlayStream(RtcRequest *request);
-    void MuteStream(RtcRequest *request);
-    void CloseStream(RtcRequest *request);
+    int PublishStream(RtcRequest *request);
+    int PlayStream(RtcRequest *request);
+    int MuteStream(RtcRequest *request);
+    int CloseStream(RtcRequest *request);
 
 protected:
     RtcWorker* FindWorkerByStreamId(std::string streamId);

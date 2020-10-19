@@ -36,7 +36,7 @@ int RtcStream::Join(RtcSession *rtcSession)
     return 0;
 }
 
-RtcSession* RtcStream::DeleteSession(std::string sessionId)
+RtcSession* RtcStream::RemoveSession(std::string sessionId)
 {
     RtcSession *rtcSession = nullptr;
 

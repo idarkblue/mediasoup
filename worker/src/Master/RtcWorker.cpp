@@ -111,8 +111,6 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
         PMS_ERROR("SessionId[{}] StreamId[{}], Session already exists",
             rtcSession->GetSessionId(), streamId);
 
-        MS_THROW_ERROR("Session already exists");
-
         return nullptr;
     }
 
@@ -120,8 +118,6 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
     if (!rtcSession) {
         PMS_ERROR("SessionId[{}] StreamId[{}], RTC Session creation failed.",
             sessionId, streamId);
-
-        MS_THROW_ERROR("RTC Session creation failed");
 
         return nullptr;
     }
@@ -136,8 +132,6 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
     if (stream->Join(rtcSession) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}], RTC Session join failed.",
             sessionId, streamId);
-
-        MS_THROW_ERROR("RTC Session join failed");
 
         return nullptr;
     }
@@ -155,14 +149,14 @@ void RtcWorker::DeleteSession(std::string streamId, std::string sessionId)
         return;
     }
 
-    auto *rtcSession = m_streamsMap[streamId]->DeleteSession(sessionId);
+    auto *rtcSession = m_streamsMap[streamId]->RemoveSession(sessionId);
+
+    PMS_INFO("SessionId[{}] Stream[{}] delete session success, ptr[{}]",
+        streamId, sessionId, (void*)rtcSession);
 
     if (rtcSession) {
         delete rtcSession;
     }
-
-    PMS_INFO("SessionId[{}] Stream[{}] delete session success, ptr[{}]",
-        streamId, sessionId, (void*)rtcSession);
 
     return;
 }
