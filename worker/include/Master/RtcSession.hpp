@@ -6,8 +6,6 @@
 #include "json.hpp"
 #include "SdpInfo.hpp"
 
-using json = nlohmann::json;
-
 namespace pingos {
 
 class RtcSession;
@@ -127,6 +125,10 @@ private:
     int ActiveRtcSessionRequest(Request &request);
     void ActiveRtcSessionEvent(Request &request, json &jsonObject);
 
+    int FillOffer(std::string &sdp);
+    int FillAnswer(std::string &sdp);
+    int FillCandidates(json &jsonObject);
+
 private:
     Role m_role;
     std::string m_sessionId { "" };
@@ -145,6 +147,7 @@ private:
     std::vector<ConsumerParameters> m_consumerParameters;
 
     json m_jsonIceParameters;
+    json m_jsonIceCandidateParameters;
     json m_jsonDtlsParameters;
 
     std::list<Listener *> m_listeners;

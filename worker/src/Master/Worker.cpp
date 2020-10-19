@@ -136,12 +136,16 @@ void Worker::OnWorkerExited(uv_process_t *req, int64_t status, int termSignal)
 void Worker::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
 {
     if (ps == m_pipeServer[0]) {
+        PMS_INFO("[Worker-{} {}] accept channel connection, role {}, server0",
+                m_opt.slot, m_process.pid, (int)channel->GetRole());
         if (channel->GetRole() == ::UnixStreamSocket::Role::PRODUCER) {
             m_channel[0] = channel;
         } else if (channel->GetRole() == ::UnixStreamSocket::Role::CONSUMER) {
             m_channel[1] = channel;
         }
     } else if (ps == m_pipeServer[1]) {
+        PMS_INFO("[Worker-{} {}] accept channel connection, role {}, server1",
+                m_opt.slot, m_process.pid, (int)channel->GetRole());
         if (channel->GetRole() == ::UnixStreamSocket::Role::PRODUCER) {
             m_channel[2] = channel;
         } else if (channel->GetRole() == ::UnixStreamSocket::Role::CONSUMER) {
@@ -162,47 +166,49 @@ void Worker::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::strin
     switch (payload[0]) {
         // 123 = '{' (a Channel JSON messsage).
         case 123:
-            PWS_DEBUG("Channel message: {}", payload);
+            PWS_DEBUG("[worker-{} {}] Channel message: {}", m_opt.slot, m_process.pid, payload);
             this->ReceiveChannelMessage(payload);
             break;
 
         // 68 = 'D' (a debug log).
         case 68:
             payload.remove_prefix(1);
-            PWS_DEBUG("[worker {}] => {}", m_process.pid, payload);
+            PWS_DEBUG("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 87 = 'W' (a warn log).
         case 87:
             payload.remove_prefix(1);
-            PWS_WARN("[worker {}] => {}", m_process.pid, payload);
+            PWS_WARN("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 69 = 'E' (an error log).
         case 69:
             payload.remove_prefix(1);
-            PWS_ERROR("[worker {}] => {}", m_process.pid, payload);
+            PWS_ERROR("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 88 = 'X' (a dump log).
         case 88:
             payload.remove_prefix(1);
-            PWS_INFO("[worker {}] => {}", m_process.pid, payload);
+            PWS_INFO("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
             break;
 
         default:
             payload.remove_prefix(1);
-            PWS_TRACE("[worker {}] => {}", m_process.pid, payload);
+            PWS_TRACE("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
     }
 }
 
 int Worker::ChannelSend(std::string data)
 {
-    PMS_DEBUG("Send Data: {}", data);
     if (m_channel[0]) {
         m_channel[0]->SendString(data);
+        PMS_DEBUG("[Worker-{} {}] Send Data: {}", m_opt.slot, m_process.pid, data);
+    } else {
+        PMS_ERROR("[Worker-{} {}] channel ptr is null", m_opt.slot, m_process.pid);
     }
 
     return 0;

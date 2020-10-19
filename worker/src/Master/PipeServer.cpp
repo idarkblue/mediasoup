@@ -1,5 +1,6 @@
 #define PMS_CLASS "pingos::PipeServer"
 
+#include <cstdio>
 #include "Master/PipeServer.hpp"
 #include "Master/Log.hpp"
 
@@ -27,6 +28,7 @@ int PipeServer::Listen(std::string pipeName)
     m_pipeName = pipeName;
 
     uv_fs_t req;
+    remove(pipeName.c_str());
     uv_fs_unlink(m_loop, &req, pipeName.c_str(), NULL);
     uv_pipe_init(m_loop, (uv_pipe_t*)&m_pipeServer, 0);
 

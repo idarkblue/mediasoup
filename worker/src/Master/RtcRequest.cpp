@@ -137,7 +137,7 @@ RtcResponse::~RtcResponse()
 
 }
 
-int RtcResponse::Reply(int error, const char* reason, json &jsonObject)
+int RtcResponse::Reply(int error, const char* reason, json &jsonData)
 {
     json jsonResponse = json::object();
 
@@ -151,7 +151,7 @@ int RtcResponse::Reply(int error, const char* reason, json &jsonObject)
     } else {
         jsonResponse["err_msg"] = "error";
     }
-    jsonResponse["data"] = json::object();
+    jsonResponse["data"] = jsonData;
 
     return nc->ReplyString(jsonResponse.dump());
 }

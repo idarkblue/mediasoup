@@ -225,16 +225,25 @@ SdpInfo::~SdpInfo()
 int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
     std::vector<ProducerParameters> &producerParameters)
 {
-    auto jsonSdp = sdptransform::parse(m_sdp);
-    if (ParseWebRtcTransport(jsonSdp, rtcTransportParameters) != 0) {
-        PMS_ERROR("Parse webrtc transport failed");
-        return -1;
-    }
+    try {
+        auto jsonSdp = sdptransform::parse(m_sdp);
+        PMS_DEBUG("transform sdp : {}", jsonSdp.dump());
+        if (ParseWebRtcTransport(jsonSdp, rtcTransportParameters) != 0) {
+            PMS_ERROR("Parse webrtc transport failed");
+            return -1;
+        }
 
-    if (ParseProducers(jsonSdp, producerParameters) != 0) {
-        PMS_ERROR("Parse producers failed");
+        if (ParseProducers(jsonSdp, producerParameters) != 0) {
+            PMS_ERROR("Parse producers failed");
+            return -1;
+        }
+
+        PMS_DEBUG("Parse producers success, producer number: {}", producerParameters.size());
+
+    } catch (const json::parse_error &error) {
+        PMS_ERROR("JSON parsing error.");
         return -1;
-    }
+    } 
 
     return 0;
 }

@@ -1,6 +1,8 @@
 #define PMS_CLASS "pingos::RtcServer"
 #define MS_CLASS "pingos::RtcServer"
 
+
+#include <algorithm>
 #include <functional>
 #include "Master/Defines.hpp"
 #include "Master/RtcServer.hpp"
@@ -80,9 +82,17 @@ int RtcServer::OnMessage(NetConnection *nc)
     RtcRequest request(nc);
 
     try {
-        json jsonObject = json::parse(nc->PopData());
+        json jsonObject;
 
-        request.Parse(jsonObject);
+        try {
+            jsonObject = json::parse(nc->PopData());
+
+            request.Parse(jsonObject);
+        } catch (const json::parse_error &error) {
+            reason = error.what();
+            PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());
+            goto _error;
+        }
 
         switch (request.methodId) {
             case RtcRequest::MethodId::STREAM_PUBLISH:
@@ -105,10 +115,6 @@ int RtcServer::OnMessage(NetConnection *nc)
             break;
         }
 
-    } catch (const json::parse_error &error) {
-        reason = error.what();
-        PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());
-        goto _error;
     } catch (const MediaSoupError& error) {
         reason = error.what();
         PMS_ERROR("discarding wrong rtc message: {}", reason);
@@ -138,6 +144,20 @@ void RtcServer::OnDisconnect(NetConnection *nc)
     return;
 }
 
+std::string& replace_all_distinct(std::string& str, const std::string& old_value, const std::string& new_value)
+{
+    std::string::size_type pos=0;
+    while((pos=str.find(old_value,pos))!= std::string::npos)
+    {
+        str=str.replace(pos,old_value.length(), new_value);
+        if(new_value.length()>0)
+        {
+            pos += new_value.length();
+        }
+    }
+    return str;
+}
+
 void RtcServer::PublishStream(RtcRequest *request)
 {
     auto jsonSdpIt = request->jsonData.find("sdp");
@@ -147,21 +167,25 @@ void RtcServer::PublishStream(RtcRequest *request)
         return;
     }
 
-    auto sdp = jsonSdpIt->dump();
+    auto sdp = jsonSdpIt->get<std::string>();
+
+    std::string errorStr = "\\=";
+    std::string rightStr = "=";
+
+    sdp = replace_all_distinct(sdp, errorStr, rightStr);
 
     RtcSession *rtcSession = nullptr;
     try {
         rtcSession = CreateRtcSession(request);
 
         rtcSession->Publish(sdp);
-
     } catch (const MediaSoupError& error) {
         PMS_ERROR("StreamId[{}] publish failed, Catch error {}", error.what());
         if (rtcSession) {
             this->DeleteSession(rtcSession);
         }
 
-        throw;
+        MS_THROW_ERROR("%s", error.what());
     }
 
     request->count++;
@@ -180,7 +204,7 @@ void RtcServer::PlayStream(RtcRequest *request)
         return;
     }
 
-    auto sdp = jsonSdpIt->dump();
+    auto sdp = jsonSdpIt->get<std::string>();
 
     RtcSession *rtcSession = nullptr;
     try {
@@ -342,14 +366,14 @@ void RtcServer::DeleteSession(RtcSession *session)
         return;
     }
 
+    PMS_INFO("SessionId[{}] StreamId[{}], RTC Session deleted, session ptr[{}].",
+            session->GetSessionId(), streamId, (void *)session);
+
     Context *ctx = (Context *) session->GetContext();
 
     delete ctx;
 
     worker->DeleteSession(streamId, session->GetSessionId());
-
-    PMS_INFO("SessionId[{}] StreamId[{}], RTC Session deleted, session ptr[{}].",
-            session->GetSessionId(), streamId, (void *)session);
 }
 
 }
