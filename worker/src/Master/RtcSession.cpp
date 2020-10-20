@@ -84,6 +84,7 @@ void RtcSession::Request::FillJson(json &jsonObject)
 std::string RtcSession::Role2String(RtcSession::Role role)
 {
     static std::string role2string[] = {
+        "none",
         "producer",
         "consumer"
     };
@@ -301,6 +302,18 @@ int RtcSession::Publish(std::string sdp)
         return -1;
     }
 
+    if (GenerateWebRtcTransportRequest("transport.connect", request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, transport connect request error",
+            m_sessionId, m_streamId);
+        return -1;
+    }
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, run transport connect request error",
+            m_sessionId, m_streamId);
+        return -1;
+    }
+
     for (auto &producer : m_producerParameters) {
         if (GenerateProducerRequest("transport.produce", producer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate producer[{}] request error",
@@ -350,6 +363,18 @@ int RtcSession::Play(std::string sdp)
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run webrtctransport request error",
+            m_sessionId, m_streamId);
+        return -1;
+    }
+
+    if (GenerateWebRtcTransportRequest("transport.connect", request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, transport connect request error",
+            m_sessionId, m_streamId);
+        return -1;
+    }
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run transport connect request error",
             m_sessionId, m_streamId);
         return -1;
     }
@@ -729,13 +754,23 @@ int RtcSession::FillAnswer(std::string &sdp)
             (*jsonExtIt)[i]["value"] = ext.id;
             i++;
         }
+
         // sdp: media: fingerprint
-        for (auto &jsonItem : m_jsonIceParameters["fingerprint"]) {
-            if (jsonItem["algorithm"].get<std::string>() == "sha-256") {
-                jsonMedia["fingerprint"]["algorithm"] = jsonItem["algorithm"].get<std::string>();
-                jsonMedia["fingerprint"]["value"] = jsonItem["id"].get<std::string>();
+        if (m_rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
+            for (auto &jsonItem : m_jsonDtlsParameters["fingerprints"]) {
+                if (jsonItem["algorithm"].get<std::string>()
+                    == m_rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
+                {
+                    jsonMedia["fingerprint"]["type"] = jsonItem["algorithm"].get<std::string>();
+                    jsonMedia["fingerprint"]["hash"] = jsonItem["value"].get<std::string>();
+                    break;
+                }
             }
         }
+
+        // sdp: media: ice
+        jsonMedia["icePwd"] = m_jsonIceParameters["password"].get<std::string>();
+        jsonMedia["iceUfrag"] = m_jsonIceParameters["usernameFragment"].get<std::string>();
 
         // sdp: media: setup
         if (m_jsonDtlsParameters["role"] == "server") {
@@ -743,19 +778,18 @@ int RtcSession::FillAnswer(std::string &sdp)
         } else if (m_jsonDtlsParameters["role"] == "client") {
             jsonMedia["setup"] = "active";
         } else if (m_jsonDtlsParameters["role"] == "auto") {
-            jsonMedia["setup"] = "actpass";
+            jsonMedia["setup"] = "active";
         }
 
         // sdp: media: fmtp & rtcpFb
-        i = 0;
         jsonMedia["fmtp"] = json::array();
         jsonMedia["rtcpFb"] = json::array();
         auto jsonFmtpIt = jsonMedia.find("fmtp");
         auto jsonRtcpFbIt = jsonMedia.find("rtcpFb");
         std::string payloads = "";
+        i = 0;
         for (auto &codec : producer.rtpParameters.codecs) {
             jsonFmtpIt->emplace_back(json::value_t::object);
-            jsonRtcpFbIt->emplace_back(json::value_t::object);
 
             std::string parameters = "";
             json jsonParameters;
@@ -777,15 +811,20 @@ int RtcSession::FillAnswer(std::string &sdp)
 
             (*jsonFmtpIt)[i]["config"] = parameters;
             (*jsonFmtpIt)[i]["payload"] = codec.payloadType;
+            i++;
 
-            for (auto &fb : codec.rtcpFeedback) {
-                (*jsonRtcpFbIt)[i]["payload"] = codec.payloadType;
-                (*jsonRtcpFbIt)[i]["type"] = fb.type;
-                (*jsonRtcpFbIt)[i]["subtype"] = fb.parameter;
+            if (codec.rtcpFeedback.size() > 0) {
+                int j = 0;
+                jsonRtcpFbIt->emplace_back(json::value_t::object);
+                for (auto &fb : codec.rtcpFeedback) {
+                    (*jsonRtcpFbIt)[j]["payload"] = codec.payloadType;
+                    (*jsonRtcpFbIt)[j]["type"] = fb.type;
+                    (*jsonRtcpFbIt)[j]["subtype"] = fb.parameter;
+                    j++;
+                }
             }
 
             payloads += std::to_string(codec.payloadType) + " ";
-            i++;
         }
 
         // sdp: media: payloads
@@ -816,6 +855,8 @@ int RtcSession::FillAnswer(std::string &sdp)
         jsonMedia["mid"] = producer.rtpParameters.mid;
         // sdp: media: port (ignore)
         jsonMedia["port"] = 9;
+        // sdp: media: protocol
+        jsonMedia["protocol"] = "RTP/SAVPF";
         // sdp: media: rtcpMux
         jsonMedia["rtcpMux"] = "rtcp-mux";
         // sdp: media: rtcpRsize
@@ -860,6 +901,7 @@ int RtcSession::FillAnswer(std::string &sdp)
 
     sdp = sdptransform::write(jsonSdp);
 
+    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", m_sessionId, m_streamId, jsonSdp.dump());
     PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", m_sessionId, m_streamId, sdp);
 
     return 0;
@@ -871,7 +913,12 @@ int RtcSession::FillCandidates(json &jsonObject)
     jsonObject = json::array();
     for (auto &jsonCandidate : m_jsonIceCandidateParameters) {
         json jsonItem;
-        jsonItem = jsonCandidate;
+        jsonItem["foundation"] = jsonCandidate["foundation"].get<std::string>();
+        jsonItem["ip"] = jsonCandidate["ip"].get<std::string>();
+        jsonItem["port"] = jsonCandidate["port"].get<int>();
+        jsonItem["priority"] = jsonCandidate["priority"].get<int>();
+        jsonItem["transport"] = jsonCandidate["protocol"].get<std::string>();
+        jsonItem["type"] = jsonCandidate["type"].get<std::string>();
         jsonItem["component"] = 1;
         jsonObject.push_back(jsonItem);
     }

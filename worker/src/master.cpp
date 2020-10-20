@@ -20,6 +20,7 @@ static const char *WorkerProcessArgs[] = {
     "--logTags=info",
     "--logTags=ice",
     "--logTags=rtp",
+    "--logTags=producer",
     nullptr
 };
 

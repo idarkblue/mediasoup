@@ -31,7 +31,7 @@ int WssServer::Accept(uint16_t port)
         .idleTimeout = 100,
         .maxBackpressure = 1 * 1024 * 1204,
         /* Handlers */
-        .open = [this](auto *ws) {
+        .open = [this](auto *ws, auto *req) {
             this->OnOpen(ws, nullptr, false);
         },
         .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
@@ -78,7 +78,7 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
         .idleTimeout = 100,
         .maxBackpressure = 1 * 1024 * 1204,
         /* Handlers */
-        .open = [this](auto *ws) {
+        .open = [this](auto *ws, auto *req) {
             this->OnOpen(ws, nullptr, true);
         },
         .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {

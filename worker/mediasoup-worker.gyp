@@ -378,7 +378,7 @@
           }
         }],
         [ 'OS == "linux"', {
-            'cflags': [ '-g', '-O0', '-std=c++17', '-Wno-newline-eof'],
+            'cflags': [ '-g', '-O0', '-std=c++17', '-Wno-newline-eof', '-Wno-missing-field-initializers'],
             'ldflags': [ '-lz' ],
             'defines': ['LIBUS_USE_OPENSSL', 'LIBUS_USE_LIBUV']
 

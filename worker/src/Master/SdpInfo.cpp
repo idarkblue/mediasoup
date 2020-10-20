@@ -78,7 +78,8 @@ void WebRtcTransportParameters::FillJsonTransport(json &jsonObject)
 void WebRtcTransportParameters::FillJsonDtls(json &jsonObject)
 {
     jsonObject = json::object();
-    jsonObject["role"] = this->dtlsParameters.role;
+    json jsonDtls = json::object();
+    jsonDtls["role"] = "auto";
 
     json jsonFingerprints = json::array();
     for (auto &fingerprint : this->dtlsParameters.fingerprints) {
@@ -88,7 +89,8 @@ void WebRtcTransportParameters::FillJsonDtls(json &jsonObject)
         jsonFingerprints.emplace_back(jsonFingerprint);
     }
 
-    jsonObject["fingerprints"] = jsonFingerprints;
+    jsonDtls["fingerprints"] = jsonFingerprints;
+    jsonObject["dtlsParameters"] = jsonDtls;
 }
 
 void ProducerParameters::FillJson(json &jsonObject)

@@ -152,7 +152,7 @@ void RtcWorker::DeleteSession(std::string streamId, std::string sessionId)
     auto *rtcSession = m_streamsMap[streamId]->RemoveSession(sessionId);
 
     PMS_INFO("SessionId[{}] Stream[{}] delete session success, ptr[{}]",
-        streamId, sessionId, (void*)rtcSession);
+        sessionId, streamId, (void*)rtcSession);
 
     if (rtcSession) {
         delete rtcSession;
