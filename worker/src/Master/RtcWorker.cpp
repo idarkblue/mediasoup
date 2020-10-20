@@ -105,11 +105,11 @@ RtcSession *RtcWorker::FindRtcSession(std::string streamId, std::string sessionI
     }
 
     auto *rtcSession = m_streamsMap[streamId]->GetPublisher();
-    if (rtcSession == nullptr) {
-        rtcSession = m_streamsMap[streamId]->GetPlayer(sessionId);
+    if (rtcSession->GetSessionId() == sessionId) {
+        return rtcSession;
     }
 
-    return rtcSession;
+    return m_streamsMap[streamId]->GetPlayer(sessionId);
 }
 
 RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId, RtcSession::Role role)
