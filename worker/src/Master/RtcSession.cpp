@@ -914,7 +914,7 @@ int RtcSession::FillOffer(std::string &sdp)
 
             json jsonGroup;
             jsonGroup["semantics"] = "FID";
-            jsonGroup["ssrcs"] = encoding.ssrc + " " + encoding.rtx.ssrc;
+            jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
             jsonGroups.push_back(jsonGroup);
         }
 
