@@ -69,7 +69,7 @@ int RtcRequest::Accept()
         return -1;
     }
 
-    PMS_INFO("StreamId[{}] rtc reply failed", this->stream);
+    PMS_DEBUG("StreamId[{}] accept relay success, content {}", this->stream, jsonResponse.dump());
 
     return 0;
 }
@@ -91,7 +91,7 @@ int RtcRequest::Accept(json &jsonData)
         return -1;
     }
 
-    PMS_INFO("StreamId[{}] rtc reply success, {}", this->stream, jsonResponse.dump());
+    PMS_DEBUG("StreamId[{}] accept relay success, content {}", this->stream, jsonResponse.dump());
 
     return 0;
 }
@@ -118,7 +118,7 @@ int RtcRequest::Error(const char* reason)
         return -1;
     }
 
-    PMS_INFO("StreamId[{}] rtc reply success, {}", this->stream, jsonResponse.dump());
+    PMS_DEBUG("StreamId[{}] rtc reply success, content {}", this->stream, jsonResponse.dump());
 
     return 0;
 }

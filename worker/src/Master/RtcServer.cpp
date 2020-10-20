@@ -93,25 +93,33 @@ int RtcServer::OnMessage(NetConnection *nc)
     request.Parse(jsonObject);
 
     try {
+        int ret = 0;
         switch (request.methodId) {
             case RtcRequest::MethodId::STREAM_PUBLISH:
-            this->PublishStream(&request);
+            ret = this->PublishStream(&request);
             break;
 
             case RtcRequest::MethodId::STREAM_PLAY:
-            this->PlayStream(&request);
+            ret = this->PlayStream(&request);
             break;
 
             case RtcRequest::MethodId::STREAM_MUTE:
-            this->MuteStream(&request);
+            ret = this->MuteStream(&request);
             break;
 
             case RtcRequest::MethodId::STREAM_CLOSE:
-            this->CloseStream(&request);
+            ret = this->CloseStream(&request);
             break;
 
             default:
             break;
+        }
+
+        if (ret != 0) {
+            PMS_ERROR("StreamId[{}] Request[{}] failed.",
+                request.stream, request.method);
+            reason = "internal error";
+            goto _error;
         }
 
     } catch (const MediaSoupError& error) {
@@ -162,7 +170,7 @@ int RtcServer::PublishStream(RtcRequest *request)
     auto jsonSdpIt = request->jsonData.find("sdp");
     if (jsonSdpIt == request->jsonData.end()) {
         PMS_ERROR("StreamId[{}] Invalid json data, missing sdp", request->stream);
-//        MS_THROW_ERROR("Missing sdp");
+        MS_THROW_ERROR("Missing sdp");
         return -1;
     }
 
@@ -177,6 +185,7 @@ int RtcServer::PublishStream(RtcRequest *request)
     rtcSession = CreateRtcSession(request);
     if (!rtcSession) {
         PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
+        MS_THROW_ERROR("Create rtc session failed");
         return -1;
     }
 
@@ -184,6 +193,8 @@ int RtcServer::PublishStream(RtcRequest *request)
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed",
             rtcSession->GetSessionId(), request->stream);
         this->DeleteSession(rtcSession);
+
+        MS_THROW_ERROR("publish failed");
 
         return -1;
     }
@@ -230,6 +241,7 @@ int RtcServer::PlayStream(RtcRequest *request)
     rtcSession = CreateRtcSession(request);
     if (!rtcSession) {
         PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
+        MS_THROW_ERROR("Create rtc session failed");
         return -1;
     }
 
@@ -239,6 +251,7 @@ int RtcServer::PlayStream(RtcRequest *request)
         this->DeleteSession(rtcSession);
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed",
             rtcSession->GetSessionId(), request->stream);
+        MS_THROW_ERROR("Play failed");
         return -1;
     }
 
