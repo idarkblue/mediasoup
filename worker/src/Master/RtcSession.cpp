@@ -215,16 +215,20 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
 //        case Channel::Request::MethodId::TRANSPORT_CONSUME:
         if (m_role == Role::PUBLISHER) {
             ack = "publish";
+            if (this->FillAnswer(sdp) != 0) {
+                jsonObject["error"] = 1;
+                jsonObject["reason"] = "create answer sdp failed";
+                jsonErrorIt = jsonObject.find("error");
+            }
         } else if (m_role == Role::PLAYER) {
             ack = "play";
+            if (this->FillOffer(sdp) != 0) {
+                jsonObject["error"] = 1;
+                jsonObject["reason"] = "create answer sdp failed";
+                jsonErrorIt = jsonObject.find("error");
+            }
         }
 
-        if (this->FillAnswer(sdp) != 0) {
-            jsonObject["error"] = 1;
-            jsonObject["reason"] = "create answer sdp failed";
-            jsonErrorIt = jsonObject.find("error");
-            break;
-        }
         jsonObject["data"]["sdp"] = sdp;
 
         break;
