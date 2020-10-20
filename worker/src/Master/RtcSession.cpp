@@ -491,6 +491,9 @@ int RtcSession::SetProducerParameters(RtcSession &rtcSession)
         }
     }
 
+    m_videoProducerId = rtcSession.GetProducerId("video");
+    m_audioProducerId = rtcSession.GetProducerId("audio");
+
     return 0;
 }
 
