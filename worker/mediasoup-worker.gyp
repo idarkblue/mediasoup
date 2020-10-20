@@ -367,7 +367,9 @@
         'deps/uwebsockets/examples',
         'deps/spdlog/include'
       ],
-      
+      'link_settings': {
+        'libraries': [ '-lz' ]
+      },
       'conditions' : [
         [ 'OS == "mac"', {
           'xcode_settings':{

@@ -8,6 +8,8 @@
 
 namespace pingos {
 
+static std::string OfferMslabel = "pingos-rtc-ms-label";
+
 std::unordered_map<RtcEvent::EventId, std::string> RtcEvent::eventId2String = {
     { RtcEvent::EventId::PUBLISH, "publish" },
     { RtcEvent::EventId::PLAY, "play" },
@@ -712,6 +714,263 @@ int RtcSession::ActiveRtcSessionRequest(Request &request)
 
 int RtcSession::FillOffer(std::string &sdp)
 {
+    if (m_jsonIceParameters.is_null() ||
+        m_jsonIceCandidateParameters.is_null() ||
+        m_jsonDtlsParameters.is_null())
+    {
+        PMS_ERROR("SessionId[{}] StreamId[{}] Ice dtls parameters needed",
+            m_sessionId, m_streamId);
+        return -1;
+    }
+
+    json jsonSdp = json::object();
+    json jsonMedias = json::array();
+
+    std::string mids = "";
+
+    // sdp: media
+    for (auto &consumer : m_consumerParameters) {
+        jsonMedias.emplace_back(json::object());
+        auto &jsonMedia = jsonMedias[jsonMedias.size() - 1];
+
+        int i = 0;
+
+        // sdp: media: candidates
+        if (this->FillCandidates(jsonMedia["candidates"]) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] Fill ice candidate failed",
+                m_sessionId, m_streamId);
+            return -1;
+        }
+
+        // sdp: media: ext
+        jsonMedia["ext"] = json::array();
+        auto jsonExtIt = jsonMedia.find("ext");
+        for (auto &ext : consumer.rtpParameters.headerExtensions) {
+            jsonExtIt->emplace_back(json::value_t::object);
+            (*jsonExtIt)[i]["uri"] = ext.uri;
+            (*jsonExtIt)[i]["value"] = ext.id;
+            i++;
+        }
+
+        // sdp: media: fingerprint
+        if (m_rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
+            for (auto &jsonItem : m_jsonDtlsParameters["fingerprints"]) {
+                if (jsonItem["algorithm"].get<std::string>()
+                    == m_rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
+                {
+                    jsonMedia["fingerprint"]["type"] = jsonItem["algorithm"].get<std::string>();
+                    jsonMedia["fingerprint"]["hash"] = jsonItem["value"].get<std::string>();
+                    break;
+                }
+            }
+        }
+
+        // sdp: media: ice
+        jsonMedia["icePwd"] = m_jsonIceParameters["password"].get<std::string>();
+        jsonMedia["iceUfrag"] = m_jsonIceParameters["usernameFragment"].get<std::string>();
+
+        // sdp: media: setup
+        if (m_jsonDtlsParameters["role"] == "server") {
+            jsonMedia["setup"] = "passive";
+        } else if (m_jsonDtlsParameters["role"] == "client") {
+            jsonMedia["setup"] = "active";
+        } else if (m_jsonDtlsParameters["role"] == "auto") {
+            jsonMedia["setup"] = "active";
+        }
+
+        // sdp: media: fmtp & rtcpFb
+        jsonMedia["fmtp"] = json::array();
+        jsonMedia["rtcpFb"] = json::array();
+        auto jsonFmtpIt = jsonMedia.find("fmtp");
+        auto jsonRtcpFbIt = jsonMedia.find("rtcpFb");
+        std::string payloads = "";
+        i = 0;
+        for (auto &codec : consumer.rtpParameters.codecs) {
+            jsonFmtpIt->emplace_back(json::value_t::object);
+
+            std::string parameters = "";
+            json jsonParameters;
+            codec.parameters.FillJson(jsonParameters);
+            for (auto &jsonItem : jsonParameters.items()) {
+                auto &key = jsonItem.key();
+                auto &value = jsonItem.value();
+
+                if (value.is_number()) {
+                    parameters += key + "=" + std::to_string(value.get<int>()) + ";";
+                } else if (value.is_string()) {
+                    parameters += key + "=" + value.get<std::string>() + ";";
+                }
+            }
+
+            if (!parameters.empty() && parameters.at(parameters.size() - 1) == ';') {
+                parameters = parameters.substr(0, parameters.size() - 1);
+            }
+
+            (*jsonFmtpIt)[i]["config"] = parameters;
+            (*jsonFmtpIt)[i]["payload"] = codec.payloadType;
+            i++;
+
+            if (codec.rtcpFeedback.size() > 0) {
+                int j = 0;
+                jsonRtcpFbIt->emplace_back(json::value_t::object);
+                for (auto &fb : codec.rtcpFeedback) {
+                    (*jsonRtcpFbIt)[j]["payload"] = codec.payloadType;
+                    (*jsonRtcpFbIt)[j]["type"] = fb.type;
+                    if (!fb.parameter.empty()) {
+                        (*jsonRtcpFbIt)[j]["subtype"] = fb.parameter;
+                    }
+                    j++;
+                }
+            }
+
+            payloads += std::to_string(codec.payloadType) + " ";
+        }
+
+        // sdp: media: payloads
+        if (!payloads.empty() && payloads.at(payloads.size() - 1) == ' ') {
+            payloads = payloads.substr(0, payloads.size() - 1);
+        }
+        jsonMedia["payloads"] = payloads;
+
+        // sdp: media: rtp
+        jsonMedia["rtp"] = json::array();
+        auto jsonRtpIt = jsonMedia.find("rtp");
+        i = 0;
+        for (auto &rtp : consumer.rtpParameters.codecs) {
+            jsonRtpIt->emplace_back(json::value_t::object);
+            auto &jsonRtp = (*jsonRtpIt)[i];
+            jsonRtp["payload"] = rtp.payloadType;
+            jsonRtp["rate"] = rtp.clockRate;
+            jsonRtp["codec"] = RTC::RtpCodecMimeType::subtype2String[rtp.mimeType.subtype];
+            if (rtp.channels > 0) {
+                jsonRtp["encoding"] = rtp.channels;
+            }
+            i++;
+        }
+
+        // sdp: media: ssrcs
+        json jsonSsrcs = json::array();
+        json jsonGroups = json::array();
+        std::string ssrcGroup = "";
+        for (auto encoding : consumer.rtpParameters.encodings) {
+            json jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "cname";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = consumer.rtpParameters.rtcp.cname;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "msid";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + consumer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "mslabel";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "label";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel + "-" + consumer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            if (!encoding.hasRtx) {
+                continue;
+            }
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "cname";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = consumer.rtpParameters.rtcp.cname;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "msid";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + consumer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "mslabel";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "label";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel + "-" + consumer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            json jsonGroup;
+            jsonGroup["semantics"] = "FID";
+            jsonGroup["ssrcs"] = encoding.ssrc + " " + encoding.rtx.ssrc;
+            jsonGroups.push_back(jsonGroup);
+        }
+
+        jsonMedia["ssrcs"] = jsonSsrcs;
+        if (jsonGroups.size() > 0) {
+            jsonMedia["ssrcGroup"] = jsonGroups;
+        }
+
+        // sdp: media: direction
+        jsonMedia["direction"] = "sendonly";
+        // sdp: media: mid
+        jsonMedia["mid"] = consumer.rtpParameters.mid;
+        // sdp: media: port (ignore)
+        jsonMedia["port"] = 9;
+        // sdp: media: protocol
+        jsonMedia["protocol"] = "RTP/SAVPF";
+        // sdp: media: rtcpMux
+        jsonMedia["rtcpMux"] = "rtcp-mux";
+        // sdp: media: rtcpRsize
+        jsonMedia["rtcpRsize"] = "rtcp-rsize";
+        // sdp: media: x-google-flag
+        jsonMedia["xGoogleFlag"] = "conference";
+        // sdp: media: type (audio or video)
+        jsonMedia["type"] = consumer.kind;
+
+        mids += consumer.rtpParameters.mid + " ";
+    }
+
+    jsonSdp["media"] = jsonMedias;
+
+    if (!mids.empty() && mids.at(mids.size() - 1) == ' ') {
+        mids = mids.substr(0, mids.size() - 1);
+    }
+
+    json jsonGroup = json::object();
+    jsonGroup["mids"] = mids;
+    jsonGroup["type"] = "BUNDLE";
+
+    jsonSdp["groups"].push_back(jsonGroup);
+
+    jsonSdp["connection"]["ip"] = "127.0.0.1";
+    jsonSdp["connection"]["version"] = 4;
+    jsonSdp["icelite"] = "ice-lite";
+    jsonSdp["msidSemantic"]["semantic"] = "WMS";
+    jsonSdp["msidSemantic"]["token"] = OfferMslabel;
+    jsonSdp["name"] = "-";
+    jsonSdp["origin"]["address"] = "0.0.0.0";
+    jsonSdp["origin"]["ipVer"] = 4;
+    jsonSdp["origin"]["netType"] = "IN";
+    jsonSdp["origin"]["sessionId"] =  std::time(nullptr);
+    jsonSdp["origin"]["sessionVersion"] = 2;
+    jsonSdp["origin"]["username"] = "pingos-rtc";
+
+    jsonSdp["timing"]["start"] = 0;
+    jsonSdp["timing"]["stop"] = 0;
+
+    jsonSdp["version"] = 0;
+
+    sdp = sdptransform::write(jsonSdp);
+
+    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", m_sessionId, m_streamId, jsonSdp.dump());
+    PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", m_sessionId, m_streamId, sdp);
+
     return 0;
 }
 

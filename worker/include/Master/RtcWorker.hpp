@@ -28,6 +28,7 @@ public: // Implement Worker
     virtual void ReceiveChannelMessage(std::string_view &payload) override;
 
 public:
+    RtcSession *FindPublisher(std::string streamId);
     RtcSession *FindRtcSession(std::string streamId, std::string sessionId);
     RtcSession *CreateSession(std::string streamId, std::string sessionId, RtcSession::Role role);
     void DeleteSession(std::string streamId, std::string sessionId);

@@ -89,6 +89,15 @@ void RtcWorker::ReceiveChannelEvent(json &jsonObject)
 
 }
 
+RtcSession *RtcWorker::FindPublisher(std::string streamId)
+{
+    if (m_streamsMap.count(streamId) == 0 || !m_streamsMap[streamId]) {
+        return nullptr;
+    }
+
+    return m_streamsMap[streamId]->GetPublisher();
+}
+
 RtcSession *RtcWorker::FindRtcSession(std::string streamId, std::string sessionId)
 {
     if (m_streamsMap.count(streamId) == 0 || !m_streamsMap[streamId]) {

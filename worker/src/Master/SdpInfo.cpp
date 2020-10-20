@@ -250,13 +250,6 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
     return 0;
 }
 
-std::string SdpInfo::GenerateAnswerSdp(std::vector<IceParameters> iceCandidates,
-    WebRtcTransportParameters &rtcTransportParameters,
-    std::vector<ProducerParameters> &producerParameters)
-{
-    return "";
-}
-
 // Consumer
 int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters)
 {
@@ -269,19 +262,6 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters)
     }
 
     return ParseWebRtcTransport(jsonSdp, rtcParameters);
-}
-
-int SdpInfo::GenerateConsumerParameters(std::vector<ProducerParameters> &producerParameters,
-    std::vector<ConsumerParameters> &consumableRtpEncodings)
-{
-    return 0;
-}
-
-std::string SdpInfo::GenerateOfferSdp(std::vector<IceParameters> iceCandidates,
-    WebRtcTransportParameters &rtcTransportParameters,
-    std::vector<ConsumerParameters> &producerParameters)
-{
-    return "";
 }
 
 int SdpInfo::ParseWebRtcTransport(json &jsonSdp, WebRtcTransportParameters &rtcTransportParameters)

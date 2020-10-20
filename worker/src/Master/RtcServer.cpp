@@ -202,7 +202,25 @@ int RtcServer::PlayStream(RtcRequest *request)
     auto jsonSdpIt = request->jsonData.find("sdp");
     if (jsonSdpIt == request->jsonData.end()) {
         PMS_ERROR("StreamId[{}] Invalid json data, missing sdp", request->stream);
-//        MS_THROW_ERROR("Missing sdp");
+        MS_THROW_ERROR("Missing sdp");
+        return -1;
+    }
+
+    auto *worker = FindWorkerByStreamId(request->stream);
+    if (worker == nullptr) {
+        PMS_ERROR("StreamId[{}] Worker not found", request->stream);
+
+        MS_THROW_ERROR("Worker not found");
+
+        return -1;
+    }
+
+    auto publisher = worker->FindPublisher(request->stream);
+    if (publisher == nullptr) {
+        PMS_ERROR("StreamId[{}] Publisher not found", request->stream);
+
+        MS_THROW_ERROR("Publisher not found");
+
         return -1;
     }
 
@@ -214,6 +232,8 @@ int RtcServer::PlayStream(RtcRequest *request)
         PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
         return -1;
     }
+
+    rtcSession->SetProducerParameters(*publisher);
 
     if (rtcSession->Play(sdp)) {
         this->DeleteSession(rtcSession);

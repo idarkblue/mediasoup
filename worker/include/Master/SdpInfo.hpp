@@ -100,18 +100,8 @@ public:
     int TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
         std::vector<ProducerParameters> &producerParameters);
 
-    std::string GenerateAnswerSdp(std::vector<IceParameters> iceCandidates,
-        WebRtcTransportParameters &rtcTransportParameters,
-        std::vector<ProducerParameters> &producerParameters);
-
     // Consumer
     int TransformSdp(WebRtcTransportParameters &rtcTransportParameters);
-    int GenerateConsumerParameters(std::vector<ProducerParameters> &producerParameters,
-        std::vector<ConsumerParameters> &consumerParameters);
-
-    std::string GenerateOfferSdp(std::vector<IceParameters> iceCandidates,
-        WebRtcTransportParameters &rtcTransportParameters,
-        std::vector<ConsumerParameters> &producerParameters);
 
 protected:
     // webrtc transport parameters
