@@ -166,38 +166,38 @@ void Worker::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::strin
     switch (payload[0]) {
         // 123 = '{' (a Channel JSON messsage).
         case 123:
-            PWS_DEBUG("[worker-{} {}] Channel message: {}", m_opt.slot, m_process.pid, payload);
+            PMS_DEBUG("[worker-{} {}] Channel message: {}", m_opt.slot, m_process.pid, payload);
             this->ReceiveChannelMessage(payload);
             break;
 
         // 68 = 'D' (a debug log).
         case 68:
             payload.remove_prefix(1);
-            PWS_DEBUG("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_DEBUG("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 87 = 'W' (a warn log).
         case 87:
             payload.remove_prefix(1);
-            PWS_WARN("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_WARN("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 69 = 'E' (an error log).
         case 69:
             payload.remove_prefix(1);
-            PWS_ERROR("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_ERROR("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             break;
 
         // 88 = 'X' (a dump log).
         case 88:
             payload.remove_prefix(1);
-            PWS_INFO("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_INFO("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
             break;
 
         default:
             payload.remove_prefix(1);
-            PWS_TRACE("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_TRACE("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
     }
 }
