@@ -849,7 +849,7 @@ int RtcSession::FillOffer(std::string &sdp)
             jsonRtp["payload"] = rtp.payloadType;
             jsonRtp["rate"] = rtp.clockRate;
             jsonRtp["codec"] = RTC::RtpCodecMimeType::subtype2String[rtp.mimeType.subtype];
-            if (rtp.channels > 0) {
+            if (consumer.kind == "audio" && rtp.channels > 0) {
                 jsonRtp["encoding"] = rtp.channels;
             }
             i++;
