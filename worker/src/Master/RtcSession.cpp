@@ -127,7 +127,7 @@ RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
 
 RtcSession::~RtcSession()
 {
-
+    this->Close();
 }
 
 void RtcSession::AddListener(RtcSession::Listener *listener)
@@ -456,8 +456,8 @@ int RtcSession::Resume(std::string kind)
 int RtcSession::Close()
 {
     Request request;
-    if (GenerateRouterRequest("router.close", request) != 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] close failed, generate router request error",
+    if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
             m_sessionId, m_streamId);
         return -1;
     }
