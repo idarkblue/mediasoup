@@ -70,6 +70,12 @@ int Configuration::Load()
 
         JSON_READ_VALUE_DEFAULT(*jsonLogIt, "path", std::string, log.path, "./logs/pms.log");
         JSON_READ_VALUE_DEFAULT(*jsonLogIt, "level", std::string, log.level, "info");
+        auto jsonTagsIt = jsonLogIt->find("tags");
+        if (jsonTagsIt != jsonLogIt->end()) {
+            for (auto &jsonTag : *jsonTagsIt) {
+                log.tags.push_back(jsonTag.dump());
+            }
+        }
 
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "port", uint16_t, websocket.port, 80);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "ssl", bool, websocket.ssl, false);
@@ -82,9 +88,12 @@ int Configuration::Load()
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "announcedIp", std::string, webrtc.announcedIp, "0.0.0.0");
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "minPort", uint16_t, webrtc.minPort, 20000);
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "maxPort", uint16_t, webrtc.maxPort, 30000);
+        JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "dtlsCertificateFile", std::string, webrtc.dtlsPrivateKeyFile, "");
+        JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "dtlsPrivateKeyFile", std::string, webrtc.dtlsPrivateKeyFile, "");
 
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "numOfWorkerProcess", int, master.numOfWorkerProcess, 0);
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "execPath", std::string, master.execPath, "");
+        JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "unixSocketPath", std::string, master.unixSocketPath, "/tmp/pingos");
 
     } catch (const json::parse_error &error) {
         PMS_ERROR("Parse Setting file[{}] failed, reason {}.", path, error.what());

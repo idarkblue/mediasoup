@@ -10,6 +10,7 @@ namespace pingos {
 struct LogConfiguration {
     std::string path;
     std::string level; // Log level, e.g. "info"
+    std::vector<std::string> tags; // e.g. ["info", "ice"]
 };
 
 struct WebsocketConfiguration {
@@ -26,11 +27,14 @@ struct WebRtcConfiguration {
     std::string announcedIp; // announced ip
     uint16_t minPort;
     uint16_t maxPort;
+    std::string dtlsCertificateFile;
+    std::string dtlsPrivateKeyFile;
 };
 
 struct MasterConfiguration {
-    int numOfWorkerProcess; // number of worker processes
-    std::string execPath;
+    int numOfWorkerProcess { 0 }; // number of worker processes
+    std::string execPath = { "./" };
+    std::string unixSocketPath { "/tmp/pingos" };
 };
 
 class Configuration

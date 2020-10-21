@@ -1,39 +1,18 @@
 #define PMS_CLASS "pingos::Worker"
 #include "Master/Log.hpp"
+#include "Master/Configuration.hpp"
 #include "Master/Worker.hpp"
 
 namespace pingos {
 
 static char MEDIASOUP_VERSION_STRING[] = "MEDIASOUP_VERSION=3.1.15";
-char **Worker::processArgs = nullptr;
-std::string Worker::pipePath = "pms.sock";
-
-void Worker::ClassInit(const char **args, const char *pipePath)
-{
-    int    count = 0;
-    size_t length = 0;
-
-    for (count = 0; args && args[count]; count++) {
-        length = length > strlen(args[count]) ? length : strlen(args[count]);
-    }
-
-    processArgs = new char *[count + 1];
-    processArgs[count] = nullptr;
-
-    for (int i = 0; args && args[i]; i++) {
-        processArgs[i] = new char[length + 1];
-        snprintf(processArgs[i], length + 1, "%s", args[i]);
-    }
-
-    Worker::pipePath = pipePath;
-}
 
 Worker::Worker(Options &opt)
 {
     m_opt = opt;
 
-    m_pipeFile = Worker::pipePath + ".channel." + std::to_string(opt.slot);
-    m_pipePayloadFile = Worker::pipePath + ".payload." + std::to_string(opt.slot);
+    m_pipeFile = Configuration::master.unixSocketPath + ".channel." + std::to_string(opt.slot);
+    m_pipePayloadFile = Configuration::master.unixSocketPath + ".payload." + std::to_string(opt.slot);
 }
 
 Worker::~Worker()
@@ -83,6 +62,46 @@ int Worker::Spawn()
         nullptr
     };
 
+    if (pingos::Configuration::Load() != 0) {
+        PMS_ERROR("Spawn worker failed, Configuration file load failed");
+        return -1;
+    }
+
+    static std::vector<std::string> vecArgs;
+
+    vecArgs.clear();
+
+    for (auto &tag : Configuration::log.tags) {
+        vecArgs.push_back(std::string("--logLevel=") + tag);
+    }
+
+    if (Configuration::webrtc.maxPort) {
+        vecArgs.push_back(std::string("--rtcMaxPort=") + std::to_string(Configuration::webrtc.maxPort));
+    }
+
+    if (Configuration::webrtc.minPort) {
+        vecArgs.push_back(std::string("--rtcMinPort=") + std::to_string(Configuration::webrtc.minPort));
+    }
+
+    if (!Configuration::webrtc.dtlsCertificateFile.empty() &&
+        !Configuration::webrtc.dtlsPrivateKeyFile.empty())
+    {
+        vecArgs.push_back(std::string("--dtlsCertificateFile=") + Configuration::webrtc.dtlsCertificateFile);
+        vecArgs.push_back(std::string("--dtlsPrivateKeyFile=") + Configuration::webrtc.dtlsPrivateKeyFile);
+    }
+
+    if (!Configuration::log.level.empty()) {
+        vecArgs.push_back(std::string("--logLevel=") + Configuration::log.level);
+    }
+
+    char **args = new char*[vecArgs.size() + 1];
+
+    for (size_t i = 0; i < vecArgs.size(); ++i) {
+        args[i] = (char*) vecArgs[i].c_str();
+    }
+
+    args[vecArgs.size()] = nullptr;
+
     uv_stdio_container_t childStdio[7];
     childStdio[0].flags = UV_IGNORE;
     childStdio[0].data.fd = 0;
@@ -105,22 +124,27 @@ int Worker::Spawn()
     childStdio[6].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
     childStdio[6].data.stream = (uv_stream_t *)(m_pipeClient[3]->GetPipeHandle());
 
-    m_options.stdio = childStdio;
-    m_options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
+    uv_process_options_t options;
 
-    m_options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
+    options.stdio = childStdio;
+    options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
+
+    options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
         auto me = static_cast<Worker*>(req->data);
         me->OnWorkerExited(req, status, termSignal);
     };
-    m_options.file = m_opt.file.c_str();
-    m_options.args = processArgs;
-    m_options.env = env;
-    m_options.flags = 0;
+    options.file = m_opt.file.c_str();
+    options.args = args;
+
+    options.env = env;
+    options.flags = 0;
 
     PMS_INFO("Startting worker[{}] .....\n", m_opt.file);
 
     m_process.data = this;
-    ::uv_spawn(m_opt.loop, &m_process, &m_options);
+    ::uv_spawn(m_opt.loop, &m_process, &options);
+
+    delete[] args;
 
     return 0;
 }

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #include "PipeServer.hpp"
 #include "PipeClient.hpp"
 #include "UnixStreamSocket.hpp"
@@ -22,17 +23,11 @@ public:
 
 public:
     struct Options {
-        uv_loop_t           *loop;
-        std::string          file;
-        Listener            *listener;
-        uint32_t             slot;
+        uv_loop_t               *loop;
+        std::string              file;
+        Listener                *listener;
+        uint32_t                 slot;
     };
-
-public:
-    static void ClassInit(const char **args, const char *pipePath);
-private:
-    static char **processArgs;
-    static std::string pipePath;
 
 public:
     Worker(Options &opt);
@@ -63,7 +58,6 @@ public:
 
 private:
     uv_process_t         m_process;
-    uv_process_options_t m_options;
     Options              m_opt;
     PipeClient          *m_pipeClient[4] { nullptr, nullptr };
     UnixStreamSocket    *m_channel[4] { nullptr };

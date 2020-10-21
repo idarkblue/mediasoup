@@ -10,6 +10,7 @@ extern "C" {
 }
 
 #include <map>
+#include <vector>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -29,6 +30,7 @@ public:
         std::string workerName { "mediasoup-worker" };
         int nWorkers { 0 };
         bool daemon { false };
+        std::vector<std::string> args;
     };
 
 public:
