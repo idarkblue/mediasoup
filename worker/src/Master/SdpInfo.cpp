@@ -181,6 +181,22 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
             codec.parameters = RTC::Parameters();
             codec.parameters.Set(obj);
         }
+
+        for (auto it = codec.rtcpFeedback.begin(); it != codec.rtcpFeedback.end(); it++){
+            if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::VIDEO &&
+                it->type == "goog-remb")
+            {
+                codec.rtcpFeedback.erase(it);
+                break;
+            }
+
+            if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::AUDIO &&
+                it->type == "transport-cc")
+            {
+                codec.rtcpFeedback.erase(it);
+                break;
+            }
+        }
     }
 
     for (auto &encoding : this->rtpParameters.encodings) {
