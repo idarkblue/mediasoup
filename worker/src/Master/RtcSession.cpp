@@ -97,7 +97,7 @@ std::string RtcSession::Role2String(RtcSession::Role role)
 RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
     m_role(role), m_sessionId(sessionId), m_streamId(stream)
 {
-    m_routerId = stream;
+    m_routerId = "pingos";
     m_transportId = sessionId + std::string("-")
         + Role2String(role) + std::string("-")
         + stream;
