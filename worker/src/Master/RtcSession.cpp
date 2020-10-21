@@ -920,7 +920,7 @@ int RtcSession::FillOffer(std::string &sdp)
 
         jsonMedia["ssrcs"] = jsonSsrcs;
         if (jsonGroups.size() > 0) {
-            jsonMedia["ssrcGroup"] = jsonGroups;
+            jsonMedia["ssrcGroups"] = jsonGroups;
         }
 
         // sdp: media: direction

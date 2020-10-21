@@ -183,15 +183,15 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
         }
 
         for (auto it = codec.rtcpFeedback.begin(); it != codec.rtcpFeedback.end(); it++){
-            if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::VIDEO &&
-                it->type == "goog-remb")
-            {
-                codec.rtcpFeedback.erase(it);
-                break;
-            }
+            // if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::VIDEO &&
+            //     it->type == "goog-remb")
+            // {
+            //     codec.rtcpFeedback.erase(it);
+            //     break;
+            // }
 
-            if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::AUDIO &&
-                it->type == "transport-cc")
+            // if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::AUDIO &&
+            if (it->type == "transport-cc")
             {
                 codec.rtcpFeedback.erase(it);
                 break;
@@ -226,13 +226,13 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
         )");
         this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
 
-        jsonParameters = json::parse(R"(
-            {
-                "uri":"http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01",
-                "id":5
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+        // jsonParameters = json::parse(R"(
+        //     {
+        //         "uri":"http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01",
+        //         "id":5
+        //     }
+        // )");
+        // this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
 
         jsonParameters = json::parse(R"(
             {
