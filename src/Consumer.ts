@@ -391,6 +391,7 @@ export class Consumer extends EnhancedEventEmitter
 
 		// Remove notification subscriptions.
 		this._channel.removeAllListeners(this._internal.consumerId);
+		this._payloadChannel.removeAllListeners(this._internal.consumerId);
 
 		this._channel.request('consumer.close', this._internal)
 			.catch(() => {});
@@ -417,6 +418,7 @@ export class Consumer extends EnhancedEventEmitter
 
 		// Remove notification subscriptions.
 		this._channel.removeAllListeners(this._internal.consumerId);
+		this._payloadChannel.removeAllListeners(this._internal.consumerId);
 
 		this.safeEmit('transportclose');
 
@@ -568,6 +570,7 @@ export class Consumer extends EnhancedEventEmitter
 
 					// Remove notification subscriptions.
 					this._channel.removeAllListeners(this._internal.consumerId);
+					this._payloadChannel.removeAllListeners(this._internal.consumerId);
 
 					this.emit('@producerclose');
 					this.safeEmit('producerclose');

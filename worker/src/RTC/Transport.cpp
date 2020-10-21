@@ -1459,6 +1459,54 @@ namespace RTC
 				break;
 			}
 
+			case Channel::Request::MethodId::DATA_CONSUMER_SET_BUFFERED_AMOUNT_LOW_THRESHOLD:
+			{
+				// This may throw.
+				RTC::DataConsumer* dataConsumer = GetDataConsumerFromInternal(request->internal);
+
+				if (dataConsumer->GetType() != RTC::DataConsumer::Type::SCTP)
+				{
+					MS_THROW_ERROR("invalid DataConsumer type");
+				}
+
+				dataConsumer->HandleRequest(request);
+
+				break;
+			}
+
+			default:
+			{
+				MS_THROW_ERROR("unknown method '%s'", request->method.c_str());
+			}
+		}
+	}
+
+	void Transport::HandleRequest(PayloadChannel::Request* request)
+	{
+		MS_TRACE();
+
+		switch (request->methodId)
+		{
+			case PayloadChannel::Request::MethodId::DATA_CONSUMER_SEND:
+			{
+				// This may throw.
+				RTC::DataConsumer* dataConsumer = GetDataConsumerFromInternal(request->internal);
+
+				if (dataConsumer->GetType() != RTC::DataConsumer::Type::SCTP)
+				{
+					MS_THROW_ERROR("invalid DataConsumer type");
+				}
+
+				if (!this->sctpAssociation)
+				{
+					MS_THROW_ERROR("no SCTP association present");
+				}
+
+				dataConsumer->HandleRequest(request);
+
+				break;
+			}
+
 			default:
 			{
 				MS_THROW_ERROR("unknown method '%s'", request->method.c_str());
@@ -1838,23 +1886,6 @@ namespace RTC
 						// Special case for the RTP probator.
 						if (report->GetSsrc() == RTC::RtpProbationSsrc)
 						{
-							// TODO: We should pass the RR to the tccClient (and in fact just RR for the
-							// probation stream).
-
-							// TODO: Convert report to ReportBlock and pass to tccClient.
-							// RTCPReportBlock in libwebrtc/libwebrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h
-							//
-							// NOTE: consumer->GetRtt() is already implemented.
-							//
-							// NOTE: Better pass our RR to the tccClient and convert there to webrtc
-							// class.
-							//
-							// if (this->tccClient)
-							// {
-							// this->tccClient->ReceiveRtcpReceiverReport(report, consumer->GetRtt(),
-							// DepLibUV::GetTimeMsInt64());
-							// }
-
 							continue;
 						}
 
@@ -1867,6 +1898,26 @@ namespace RTC
 					}
 
 					consumer->ReceiveRtcpReceiverReport(report);
+				}
+
+				if (this->tccClient && !this->mapConsumers.empty())
+				{
+					float rtt = 0;
+
+					// Retrieve the RTT from the first active consumer.
+					for (auto& kv : this->mapConsumers)
+					{
+						auto* consumer = kv.second;
+
+						if (consumer->IsActive())
+						{
+							rtt = consumer->GetRtt();
+
+							break;
+						}
+					}
+
+					this->tccClient->ReceiveRtcpReceiverReport(rr, rtt, DepLibUV::GetTimeMsInt64());
 				}
 
 				break;
@@ -2666,11 +2717,11 @@ namespace RTC
 	}
 
 	inline void Transport::OnDataConsumerSendMessage(
-	  RTC::DataConsumer* dataConsumer, uint32_t ppid, const uint8_t* msg, size_t len)
+	  RTC::DataConsumer* dataConsumer, uint32_t ppid, const uint8_t* msg, size_t len, onQueuedCallback* cb)
 	{
 		MS_TRACE();
 
-		SendMessage(dataConsumer, ppid, msg, len);
+		SendMessage(dataConsumer, ppid, msg, len, cb);
 	}
 
 	inline void Transport::OnDataConsumerDataProducerClosed(RTC::DataConsumer* dataConsumer)
@@ -2810,25 +2861,27 @@ namespace RTC
 		}
 
 		// Pass the SCTP message to the corresponding DataProducer.
-		dataProducer->ReceiveMessage(ppid, msg, len);
+		try
+		{
+			dataProducer->ReceiveMessage(ppid, msg, len);
+		}
+		catch (std::exception& error)
+		{
+			// Nothing to do.
+		}
 	}
 
 	inline void Transport::OnSctpAssociationBufferedAmount(
-	  RTC::SctpAssociation* /*sctpAssociation*/, uint32_t len)
+	  RTC::SctpAssociation* /*sctpAssociation*/, uint32_t bufferedAmount)
 	{
 		MS_TRACE();
 
-		// Notify the Node DataConsumers.
-		json data = json::object();
-
-		data["bufferedAmount"] = len;
-
 		for (const auto& kv : this->mapDataConsumers)
 		{
-			const auto* dataConsumer = kv.second;
+			auto* dataConsumer = kv.second;
 
 			if (dataConsumer->GetType() == RTC::DataConsumer::Type::SCTP)
-				Channel::Notifier::Emit(dataConsumer->id, "bufferedamount", data);
+				dataConsumer->SctpAssociationBufferedAmount(bufferedAmount);
 		}
 	}
 
