@@ -199,6 +199,65 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
         }
     }
 
+    if (this->kind == "audio") {
+        this->rtpParameters.headerExtensions.clear();
+        json jsonParameters = json::parse(R"(
+            {
+                "uri":"http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
+                "id":4
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+
+        jsonParameters = json::parse(R"(
+            {
+                "uri":"urn:ietf:params:rtp-hdrext:ssrc-audio-level",
+                "id":10
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+    } else if (this->kind == "video") {
+        this->rtpParameters.headerExtensions.clear();
+        json jsonParameters = json::parse(R"(
+            {
+                "uri":"http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
+                "id":4
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+
+        jsonParameters = json::parse(R"(
+            {
+                "uri":"http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01",
+                "id":5
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+
+        jsonParameters = json::parse(R"(
+            {
+                "uri":"http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07",
+                "id":6
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+
+        jsonParameters = json::parse(R"(
+            {
+                "uri":"urn:3gpp:video-orientation",
+                "id":11
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+
+        jsonParameters = json::parse(R"(
+            {
+                "uri":"urn:ietf:params:rtp-hdrext:toffset",
+                "id":12
+            }
+        )");
+        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
+    }
     for (auto &encoding : this->rtpParameters.encodings) {
         if (producer.rtpMapping.codecs.count(encoding.codecPayloadType) == 0) {
             continue;
