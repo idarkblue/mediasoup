@@ -10,7 +10,7 @@
       'deps/usrsctp/usrsctp.gyp:usrsctp',
       'deps/libwebrtc/libwebrtc.gyp:libwebrtc',
       'deps/libwebrtc/deps/abseil-cpp/abseil-cpp.gyp:abseil',
-      'deps/uwebsockets/uSockets/usockets.gyp:usockets'
+      'deps/uWebSockets/uSockets/usockets.gyp:usockets'
     ],
     # TODO: SCTP_DEBUG must be dynamic based on a condition variable in common.gyp.
     # 'defines': [ 'SCTP_DEBUG' ],
@@ -364,9 +364,9 @@
       ],
       'include_dirs':
       [
-        'deps/uwebsockets/src',
-        'deps/uwebsockets/uSockets/src',
-        'deps/uwebsockets/examples',
+        'deps/uWebSockets/src',
+        'deps/uWebSockets/uSockets/src',
+        'deps/uWebSockets/examples',
         'deps/spdlog/include'
       ],
       'link_settings': {

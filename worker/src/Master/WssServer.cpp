@@ -31,6 +31,7 @@ int WssServer::Accept(uint16_t port)
         .idleTimeout = 100,
         .maxBackpressure = 1 * 1024 * 1204,
         /* Handlers */
+        .upgrade = nullptr,
         .open = [this](auto *ws) {
             this->OnOpen(ws, nullptr, false);
         },
@@ -78,6 +79,7 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
         .idleTimeout = 100,
         .maxBackpressure = 1 * 1024 * 1204,
         /* Handlers */
+        .upgrade = nullptr,
         .open = [this](auto *ws) {
             this->OnOpen(ws, nullptr, true);
         },
