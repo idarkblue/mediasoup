@@ -57,6 +57,7 @@ public:
     virtual int ReceiveMasterMessage(std::string &payload) = 0;
 
 private:
+    uv_process_options_t m_options;
     uv_process_t         m_process;
     Options              m_opt;
     PipeClient          *m_pipeClient[4] { nullptr, nullptr };
@@ -64,6 +65,7 @@ private:
     PipeServer          *m_pipeServer[2] { nullptr };
     std::string          m_pipeFile;
     std::string          m_pipePayloadFile;
+    char               **m_args;
 };
 
 }

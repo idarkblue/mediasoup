@@ -13,6 +13,51 @@ Worker::Worker(Options &opt)
 
     m_pipeFile = Configuration::master.unixSocketPath + ".channel." + std::to_string(opt.slot);
     m_pipePayloadFile = Configuration::master.unixSocketPath + ".payload." + std::to_string(opt.slot);
+
+    static std::vector<std::string> vecArgs;
+
+    vecArgs.clear();
+
+    for (auto &tag : Configuration::log.tags) {
+        vecArgs.push_back(std::string("--logTags=") + tag);
+    }
+
+    if (!Configuration::log.level.empty()) {
+        vecArgs.push_back(std::string("--logLevel=") + Configuration::log.level);
+    }
+
+    if (Configuration::webrtc.maxPort) {
+        vecArgs.push_back(std::string("--rtcMaxPort=") + std::to_string(Configuration::webrtc.maxPort));
+    }
+
+    if (Configuration::webrtc.minPort) {
+        vecArgs.push_back(std::string("--rtcMinPort=") + std::to_string(Configuration::webrtc.minPort));
+    }
+
+    if (!Configuration::webrtc.dtlsCertificateFile.empty() &&
+        !Configuration::webrtc.dtlsPrivateKeyFile.empty())
+    {
+        vecArgs.push_back(std::string("--dtlsCertificateFile=") + Configuration::webrtc.dtlsCertificateFile);
+        vecArgs.push_back(std::string("--dtlsPrivateKeyFile=") + Configuration::webrtc.dtlsPrivateKeyFile);
+    }
+
+    size_t length = 0;
+
+    for (auto &item : vecArgs) {
+        length = length > item.length() ? length : item.length();
+        length += 1;
+    }
+
+    m_args = new char *[vecArgs.size() + 1];
+
+    size_t i = 0;
+    for (auto &arg : vecArgs) {
+        m_args[i] = new char[length];
+        snprintf(m_args[i], length + 1, "%s", arg.c_str());
+        i++;
+    }
+
+    m_args[vecArgs.size()] = nullptr;
 }
 
 Worker::~Worker()
@@ -62,46 +107,6 @@ int Worker::Spawn()
         nullptr
     };
 
-    if (pingos::Configuration::Load() != 0) {
-        PMS_ERROR("Spawn worker failed, Configuration file load failed");
-        return -1;
-    }
-
-    static std::vector<std::string> vecArgs;
-
-    vecArgs.clear();
-
-    for (auto &tag : Configuration::log.tags) {
-        vecArgs.push_back(std::string("--logLevel=") + tag);
-    }
-
-    if (Configuration::webrtc.maxPort) {
-        vecArgs.push_back(std::string("--rtcMaxPort=") + std::to_string(Configuration::webrtc.maxPort));
-    }
-
-    if (Configuration::webrtc.minPort) {
-        vecArgs.push_back(std::string("--rtcMinPort=") + std::to_string(Configuration::webrtc.minPort));
-    }
-
-    if (!Configuration::webrtc.dtlsCertificateFile.empty() &&
-        !Configuration::webrtc.dtlsPrivateKeyFile.empty())
-    {
-        vecArgs.push_back(std::string("--dtlsCertificateFile=") + Configuration::webrtc.dtlsCertificateFile);
-        vecArgs.push_back(std::string("--dtlsPrivateKeyFile=") + Configuration::webrtc.dtlsPrivateKeyFile);
-    }
-
-    if (!Configuration::log.level.empty()) {
-        vecArgs.push_back(std::string("--logLevel=") + Configuration::log.level);
-    }
-
-    char **args = new char*[vecArgs.size() + 1];
-
-    for (size_t i = 0; i < vecArgs.size(); ++i) {
-        args[i] = (char*) vecArgs[i].c_str();
-    }
-
-    args[vecArgs.size()] = nullptr;
-
     uv_stdio_container_t childStdio[7];
     childStdio[0].flags = UV_IGNORE;
     childStdio[0].data.fd = 0;
@@ -124,27 +129,28 @@ int Worker::Spawn()
     childStdio[6].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
     childStdio[6].data.stream = (uv_stream_t *)(m_pipeClient[3]->GetPipeHandle());
 
-    uv_process_options_t options;
 
-    options.stdio = childStdio;
-    options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
+    m_options.stdio = childStdio;
+    m_options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
 
-    options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
+    m_options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
         auto me = static_cast<Worker*>(req->data);
         me->OnWorkerExited(req, status, termSignal);
     };
-    options.file = m_opt.file.c_str();
-    options.args = args;
+    m_options.file = m_opt.file.c_str();
+    m_options.args = m_args;
 
-    options.env = env;
-    options.flags = 0;
+    m_options.env = env;
+    m_options.flags = 0;
 
     PMS_INFO("Startting worker[{}] .....\n", m_opt.file);
 
     m_process.data = this;
-    ::uv_spawn(m_opt.loop, &m_process, &options);
-
-    delete[] args;
+    int ret = ::uv_spawn(m_opt.loop, &m_process, &m_options);
+    if (ret != 0) {
+        PMS_ERROR("Spawn {} {}", ret, ::uv_err_name(ret));
+        return -1;
+    }
 
     return 0;
 }

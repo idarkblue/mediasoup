@@ -15,7 +15,6 @@ public:
     virtual ~WssServer();
 
 protected:
-    void OnListen(us_listen_socket_t *listenSocket);
     void OnOpen(void *c, uWS::HttpRequest *req, bool ssl);
     void OnDrain(void *c, bool ssl);
     void OnMessage(void *c, std::string_view message, uWS::OpCode opCode, bool ssl);

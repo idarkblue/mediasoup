@@ -73,7 +73,7 @@ int Configuration::Load()
         auto jsonTagsIt = jsonLogIt->find("tags");
         if (jsonTagsIt != jsonLogIt->end()) {
             for (auto &jsonTag : *jsonTagsIt) {
-                log.tags.push_back(jsonTag.dump());
+                log.tags.push_back(jsonTag.get<std::string>());
             }
         }
 

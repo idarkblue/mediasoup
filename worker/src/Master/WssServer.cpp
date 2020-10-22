@@ -98,21 +98,16 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
         .close = [this](auto *ws, int code, std::string_view message) {
             this->OnClose(ws, code, message, true);
         }
-    }).listen(port, [this](auto *token) {
-        this->OnListen(token);
+    }).listen(port, [this, port](auto *token) {
+        m_listenSocket = token;
+        if (token) {
+            PMS_INFO("WebSocket is listening on port {}", port);
+        } else {
+            PMS_ERROR("WebSocket is listening on port {} failed", port);
+        }
     });
 
     return 0;
-}
-
-void WssServer::OnListen(us_listen_socket_t *listenSocket)
-{
-    this->m_listenSocket = listenSocket;
-    if (listenSocket) {
-        PMS_INFO("WebSocket is listening on port {}", m_port);
-    } else {
-        PMS_ERROR("WebSocket is listening on port {} failed", m_port);
-    }
 }
 
 void WssServer::OnOpen(void *c, uWS::HttpRequest *req, bool ssl)
