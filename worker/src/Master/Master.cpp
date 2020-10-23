@@ -91,7 +91,7 @@ void Master::CreateWorkers()
         };
 
         auto worker = this->NewWorker(opt);
-        worker->Spawn();
+        worker->SetPipe();
         m_slotWorkerMap[i] = worker;
     }
 }

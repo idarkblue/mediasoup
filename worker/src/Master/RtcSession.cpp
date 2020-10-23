@@ -138,6 +138,7 @@ void RtcSession::AddListener(RtcSession::Listener *listener)
 void RtcSession::SetWorker(RtcWorker *worker)
 {
     m_worker = worker;
+    m_status = Status::INITED;
 }
 
 RtcSession::Role RtcSession::GetRole()
@@ -253,6 +254,7 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
         jsonAck["error"] = 0;
         jsonAck["reason"] = "OK";
         jsonAck["data"] = jsonObject["data"];
+        m_status = Status::TRANSPORT_CREATED;
     }
 
     for (auto listener : m_listeners) {
@@ -455,6 +457,12 @@ int RtcSession::Resume(std::string kind)
 
 int RtcSession::Close()
 {
+    if (m_status == Status::CLOSED) {
+        PMS_WARN("SessionId[{}] StreamId[{}] the session has been closed",
+            m_sessionId, m_streamId);
+        return 0;
+    }
+
     Request request;
     if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
@@ -467,6 +475,8 @@ int RtcSession::Close()
             m_sessionId, m_streamId);
         return -1;
     }
+
+    m_status = Status::CLOSED;
 
     return 0;
 }

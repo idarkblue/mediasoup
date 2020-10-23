@@ -64,6 +64,15 @@ public:
     };
 
 public:
+    enum Status {
+        IDLE,
+        INITED,
+        TRANSPORT_CREATED,
+        MEDIA_CREATED,
+        CLOSED
+    };
+
+public:
     class Listener {
     public:
         virtual void OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject) = 0;
@@ -130,6 +139,7 @@ private:
     int FillCandidates(json &jsonObject);
 
 private:
+
     Role m_role;
     std::string m_sessionId { "" };
     std::string m_streamId { "" };
@@ -154,6 +164,8 @@ private:
 
     RtcWorker *m_worker;
     void *m_ctx;
+
+    Status m_status { Status::IDLE };
 
 private:
     std::unordered_map<uint64_t, Request> m_requestWaittingMap;

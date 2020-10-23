@@ -14,9 +14,7 @@ Worker::Worker(Options &opt)
     m_pipeFile = Configuration::master.unixSocketPath + ".channel." + std::to_string(opt.slot);
     m_pipePayloadFile = Configuration::master.unixSocketPath + ".payload." + std::to_string(opt.slot);
 
-    static std::vector<std::string> vecArgs;
-
-    vecArgs.clear();
+    std::vector<std::string> vecArgs;
 
     for (auto &tag : Configuration::log.workerTags) {
         vecArgs.push_back(std::string("--logTags=") + tag);
@@ -100,14 +98,11 @@ int Worker::SetPipe()
 
 int Worker::Spawn()
 {
-    this->SetPipe();
+    //this->SetPipe();
 
-    static char *env[] = {
-        MEDIASOUP_VERSION_STRING,
-        nullptr
-    };
+    env[0] = MEDIASOUP_VERSION_STRING;
+    env[1] = nullptr;
 
-    uv_stdio_container_t childStdio[7];
     childStdio[0].flags = UV_IGNORE;
     childStdio[0].data.fd = 0;
 
@@ -129,7 +124,6 @@ int Worker::Spawn()
     childStdio[6].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
     childStdio[6].data.stream = (uv_stream_t *)(m_pipeClient[3]->GetPipeHandle());
 
-
     m_options.stdio = childStdio;
     m_options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
 
@@ -143,14 +137,20 @@ int Worker::Spawn()
     m_options.env = env;
     m_options.flags = 0;
 
-    PMS_INFO("Startting worker[{}] .....\n", m_opt.file);
-
     m_process.data = this;
-    int ret = ::uv_spawn(m_opt.loop, &m_process, &m_options);
-    if (ret != 0) {
-        PMS_ERROR("Spawn {} {}", ret, ::uv_err_name(ret));
-        return -1;
-    }
+
+    int ret = 0;
+    do {
+        ret = ::uv_spawn(m_opt.loop, &m_process, &m_options);
+        if (ret != 0) {
+            PMS_ERROR("Spawn [worker-{}][file {}] {} {}",
+                m_opt.slot, m_opt.file, ret, ::uv_err_name(ret));
+            //return -1;
+        } else {
+            PMS_INFO("Spawn [worker-{}][file {}] success\n",
+                m_opt.slot, m_opt.file);
+        }
+    } while (ret != 0);
 
     return 0;
 }
@@ -181,8 +181,12 @@ void Worker::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
         } else if (channel->GetRole() == ::UnixStreamSocket::Role::CONSUMER) {
             m_channel[3] = channel;
         }
-    } else {
-        return;
+    }
+
+    if (m_channel[0] != nullptr && m_channel[1] != nullptr &&
+        m_channel[2] != nullptr && m_channel[3] != nullptr)
+    {
+        this->Spawn();
     }
 }
 

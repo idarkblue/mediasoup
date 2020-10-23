@@ -36,12 +36,10 @@ public:
     void SetUnixStreamSocket(std::shared_ptr<UnixStreamSocket> channel);
     int SetListener(Listener *listener);
     int Spawn();
+    int SetPipe();
 
 public:
     void OnWorkerExited(uv_process_t *req, int64_t status, int termSignal);
-
-protected:
-    int SetPipe();
 
 // PipeServer listener
 public:
@@ -66,6 +64,8 @@ private:
     std::string          m_pipeFile;
     std::string          m_pipePayloadFile;
     char               **m_args;
+    uv_stdio_container_t childStdio[7];
+    char *env[2];
 };
 
 }
