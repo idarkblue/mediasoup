@@ -28,9 +28,7 @@ namespace pingos {
 class Log {
 
 public:
-    static void ClassInit(std::string filename,
-        spdlog::level::level_enum consolLevel = spdlog::level::level_enum::info,
-        spdlog::level::level_enum fileLevel = spdlog::level::level_enum::info);
+    static void ClassInit(std::string filename, std::string fileLevel, std::string consolLevel);
 
     static void AddLogger(std::string name, spdlog::level::level_enum level);
 

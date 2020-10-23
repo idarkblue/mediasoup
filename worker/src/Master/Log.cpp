@@ -8,18 +8,17 @@ namespace pingos {
 std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> Log::consolSink;
 std::shared_ptr<spdlog::sinks::basic_file_sink_mt> Log::fileSink;
 
-void Log::ClassInit(std::string filename,
-    spdlog::level::level_enum consolLevel, spdlog::level::level_enum fileLevel)
+void Log::ClassInit(std::string filename, std::string fileLevel, std::string consolLevel)
 {
     try
     {
         consolSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        consolSink->set_level(consolLevel);
+        consolSink->set_level(spdlog::level::from_str(fileLevel));
 //        consolSink->set_pattern("[multi_sink_example] [%^%l%$] %v");
 //        consolSink->set_pattern("[thread %t] [%Y-%m-%d %H:%M:%S.%e] [%^%l%$] : %v");
 
         fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, true);
-        fileSink->set_level(fileLevel);
+        fileSink->set_level(spdlog::level::from_str(consolLevel));
 
         AddLogger(PMS_LOGGER, spdlog::level::level_enum::trace);
     }

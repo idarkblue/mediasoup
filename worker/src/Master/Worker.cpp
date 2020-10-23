@@ -18,12 +18,12 @@ Worker::Worker(Options &opt)
 
     vecArgs.clear();
 
-    for (auto &tag : Configuration::log.tags) {
+    for (auto &tag : Configuration::log.workerTags) {
         vecArgs.push_back(std::string("--logTags=") + tag);
     }
 
-    if (!Configuration::log.level.empty()) {
-        vecArgs.push_back(std::string("--logLevel=") + Configuration::log.level);
+    if (!Configuration::log.workerLevel.empty()) {
+        vecArgs.push_back(std::string("--logLevel=") + Configuration::log.workerLevel);
     }
 
     if (Configuration::webrtc.maxPort) {

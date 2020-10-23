@@ -3,6 +3,7 @@
 #include "Master/Defines.hpp"
 #include "Master/Log.hpp"
 #include "Master/Master.hpp"
+#include "Master/Configuration.hpp"
 
 namespace pingos {
 
@@ -28,17 +29,18 @@ uint32_t Master::GetWorkerCount()
     return m_workers;
 }
 
-int Master::StartWorkers(Options &opt)
+int Master::Start()
 {
-    this->SetCPU(opt.nWorkers);
-    this->SetPath(opt.execDir.c_str(), opt.workerName.c_str());
-    this->CreateWorkers(opt.daemon);
+    this->SetCPU();
+    this->SetPath();
+    this->CreateWorkers();
 
     return 0;
 }
 
-void Master::SetCPU(int nWorkers)
+void Master::SetCPU()
 {
+    int nWorkers = pingos::Configuration::master.numOfWorkerProcess;
     int            cpuCount;
     uv_cpu_info_t *info;
 
@@ -51,12 +53,10 @@ void Master::SetCPU(int nWorkers)
     }
 }
 
-void Master::SetPath(const char *execDir, const char *name)
+void Master::SetPath()
 {
-    m_execDir = execDir;
-    if (execDir[strlen(execDir) - 1] != '/') {
-        m_execDir += "/";
-    }
+    m_execDir = pingos::Configuration::master.execPath;
+    m_workerName = pingos::Configuration::master.workerName;
 
     if (uv_chdir(m_execDir.c_str()) != 0) {
         PMS_ERROR("Changes the current working directory[{}] failed.", m_execDir.c_str());
@@ -69,21 +69,18 @@ void Master::SetPath(const char *execDir, const char *name)
     uv_exepath(MasterProcessPath, &pathSize);
 
     std::string path(MasterProcessPath, pathSize);
-    std::string exeDir = "./";
+    std::string execPath = "./";
 
     auto pos = path.find_last_of('/');
     if (pos != std::string::npos) {
-        exeDir = path.substr(0, pos + 1);
+        execPath = path.substr(0, pos + 1);
     }
 
-    m_workerName = name;
-    m_workerPath = exeDir + m_workerName;
+    m_workerPath = execPath + m_workerName;
 }
 
-void Master::CreateWorkers(bool daemon)
+void Master::CreateWorkers()
 {
-    m_daemon = daemon;
-
     for (uint32_t i = 0; i < m_workers; i++) {
 
         Worker::Options opt = {

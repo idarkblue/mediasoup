@@ -23,16 +23,6 @@ namespace pingos {
 
 class Master : public Worker::Listener
 {
-
-public:
-    struct Options {
-        std::string execDir { "./" };
-        std::string workerName { "mediasoup-worker" };
-        int nWorkers { 0 };
-        bool daemon { false };
-        std::vector<std::string> args;
-    };
-
 public:
     static uv_loop_t  *Loop;
 
@@ -44,13 +34,13 @@ public:
     ~Master();
 
 public:
-    int StartWorkers(Options &opt);
+    int Start();
     uint32_t GetWorkerCount();
 
 protected:
-    void SetPath(const char *execDir, const char *workerName);
-    void SetCPU(int nWorkers);
-    void CreateWorkers(bool daemon);
+    void SetPath();
+    void SetCPU();
+    void CreateWorkers();
 
 protected:
     int Send2Worker(uint32_t slot, std::string payload);
@@ -65,7 +55,6 @@ public:
 
 protected:
     uint32_t                                  m_workers { 0 };
-    bool                                      m_daemon { false };
     std::string                               m_execDir { "./" };
     std::string                               m_workerPath { "" };
     std::string                               m_workerName { "" };

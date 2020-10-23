@@ -106,7 +106,7 @@ void PipeServer::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string
         m_listener->OnChannelRecv(this, channel, payload);
     }
 
-    PMS_DEBUG("{}", payload);
+//    PMS_DEBUG("{}", payload);
 }
 
 void PipeServer::OnChannelClosed(pingos::UnixStreamSocket* channel)

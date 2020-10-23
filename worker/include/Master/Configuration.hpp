@@ -8,9 +8,11 @@
 namespace pingos {
 
 struct LogConfiguration {
-    std::string path;
-    std::string level; // Log level, e.g. "info"
-    std::vector<std::string> tags; // e.g. ["info", "ice"]
+    std::string file;
+    std::string workerLevel; // Log level, e.g. "debug" or "warn" or "error" or "none"
+    std::vector<std::string> workerTags; // e.g. ["info", "ice"]
+    std::string fileLevel; // Log level, e.g. "trace", "debug", "info", "warning", "error", "critical", "off"
+    std::string consolLevel; // Log level, e.g. "trace", "debug", "info", "warning", "error", "critical", "off"
 };
 
 struct WebsocketConfiguration {
@@ -34,6 +36,7 @@ struct WebRtcConfiguration {
 struct MasterConfiguration {
     int numOfWorkerProcess { 0 }; // number of worker processes
     std::string execPath = { "./" };
+    std::string workerName = { "" };
     std::string unixSocketPath { "/tmp/pingos" };
 };
 

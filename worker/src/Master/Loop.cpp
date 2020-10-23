@@ -1,4 +1,7 @@
+#include "Master/Log.hpp"
 #include "Master/Loop.hpp"
+
+#define PMS_CLASS "pingos::Loop"
 
 namespace pingos {
 
@@ -11,7 +14,7 @@ uv_loop_t* Loop::FetchLoop()
 {
     auto loop = DepLibUV::GetLoop();
     if (loop == nullptr || uWS::Loop::get(loop) == nullptr) {
-        fprintf(stderr, "Creating uWS loop failed.\r\n");
+        PMS_ERROR("Creating uWS loop failed.");
         return nullptr;
     }
 

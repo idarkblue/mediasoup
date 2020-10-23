@@ -23,9 +23,6 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    pingos::Log::ClassInit(PMS_LOG_FILE, spdlog::level::level_enum::trace, spdlog::level::level_enum::trace);
-    pingos::Loop::ClassInit();
-    pingos::Master::ClassInit(pingos::Loop::FetchLoop());
     pingos::Configuration::ClassInit(argv[1]);
 
     if (pingos::Configuration::Load() != 0) {
@@ -33,7 +30,14 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    pingos::Log::ClassInit(pingos::Configuration::log.file, pingos::Configuration::log.fileLevel, pingos::Configuration::log.fileLevel);
+    pingos::Loop::ClassInit();
+    pingos::Master::ClassInit(pingos::Loop::FetchLoop());
+
     pingos::WssServer ws;
+    pingos::RtcMaster master;
+    pingos::RtcServer rtc;
+
     if (pingos::Configuration::websocket.ssl) {
         ws.Accept(pingos::Configuration::websocket.port,
             pingos::Configuration::websocket.keyFile,
@@ -43,16 +47,9 @@ int main(int argc, char **argv)
         ws.Accept(pingos::Configuration::websocket.port);
     }
 
-    pingos::RtcMaster master;
+    rtc.Start(&ws, &master);
 
-    pingos::RtcServer rtc(&ws, &master);
-
-    pingos::Master::Options opt;
-    opt.execDir = pingos::Configuration::master.execPath;
-    opt.nWorkers = pingos::Configuration::master.numOfWorkerProcess;
-    opt.daemon = false;
-
-    master.StartWorkers(opt);
+    master.Start();
 
     pingos::Loop::Run();
 }

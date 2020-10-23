@@ -31,8 +31,11 @@ struct Context {
 };
 
 public:
+    RtcServer() = default;
     RtcServer(NetServer *netServer, RtcMaster *rtcMaster);
     virtual ~RtcServer();
+
+    int Start(NetServer *netServer, RtcMaster *rtcMaster);
 
 // Implement RtcSession::Listener
 protected:

@@ -40,7 +40,7 @@ int Configuration::Load()
     std::ifstream in(path, std::ios::binary);
 
     if (!in.is_open()){
-        PMS_ERROR("Open Configuration file {} failed", path);
+        printf("Open Configuration file[%s] failed", path.c_str());
         return -1;
     }
 
@@ -50,32 +50,38 @@ int Configuration::Load()
 
         auto jsonLogIt = jsonObject.find("log");
         if (jsonLogIt == jsonObject.end()) {
-            MS_THROW_ERROR("Missing log");
+            printf("Invalid configuration file, Missing log");
+            return -1;
         }
 
         auto jsonWebsocketIt = jsonObject.find("websocket");
         if (jsonWebsocketIt == jsonObject.end()) {
-            MS_THROW_ERROR("Missing websocket");
+            printf("Invalid configuration file, Missing websocket");
+            return -1;
         }
 
         auto jsonMasterIt = jsonObject.find("master");
         if (jsonMasterIt == jsonObject.end()) {
-            MS_THROW_ERROR("Missing master");
+            printf("Invalid configuration file, Missing master");
+            return -1;
         }
 
         auto jsonWebRtcIt = jsonObject.find("webrtc");
         if (jsonWebRtcIt == jsonObject.end()) {
-            MS_THROW_ERROR("Missing webrtc");
+            printf("Invalid configuration file, Missing webrtc");
+            return -1;
         }
 
-        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "path", std::string, log.path, "./logs/pms.log");
-        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "level", std::string, log.level, "info");
-        auto jsonTagsIt = jsonLogIt->find("tags");
+        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "file", std::string, log.file, "./logs/pms.log");
+        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "workerLevel", std::string, log.workerLevel, "warn");
+        auto jsonTagsIt = jsonLogIt->find("workerTags");
         if (jsonTagsIt != jsonLogIt->end()) {
             for (auto &jsonTag : *jsonTagsIt) {
-                log.tags.push_back(jsonTag.get<std::string>());
+                log.workerTags.push_back(jsonTag.get<std::string>());
             }
         }
+        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "fileLevel", std::string, log.fileLevel, "info");
+        JSON_READ_VALUE_DEFAULT(*jsonLogIt, "consolLevel", std::string, log.consolLevel, "info");
 
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "port", uint16_t, websocket.port, 80);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "ssl", bool, websocket.ssl, false);
@@ -92,11 +98,21 @@ int Configuration::Load()
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "dtlsPrivateKeyFile", std::string, webrtc.dtlsPrivateKeyFile, "");
 
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "numOfWorkerProcess", int, master.numOfWorkerProcess, 0);
-        JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "execPath", std::string, master.execPath, "");
+        JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "execPath", std::string, master.execPath, "./");
+        if (master.execPath.empty()) {
+            master.execPath = "./";
+        }
+
+        if (master.execPath.at(master.execPath.size() - 1) != '/') {
+            master.execPath += "/";
+        }
+
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "unixSocketPath", std::string, master.unixSocketPath, "/tmp/pingos");
+        JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "workerName", std::string, master.workerName, "mediasoup-worker");
 
     } catch (const json::parse_error &error) {
-        PMS_ERROR("Parse Setting file[{}] failed, reason {}.", path, error.what());
+        printf("Invalid configuration file, Parse Setting file[%s] failed, reason %s.",
+            path.c_str(), error.what());
         in.close();
 
         return -1;
