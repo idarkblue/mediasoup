@@ -3,9 +3,8 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include "PipeServer.hpp"
-#include "PipeClient.hpp"
 #include "UnixStreamSocket.hpp"
+#include "Pipe.hpp"
 
 extern "C" {
     #include <uv.h>
@@ -13,7 +12,7 @@ extern "C" {
 
 namespace pingos {
 
-class Worker : public PipeServer::Listener
+class Worker : public UnixStreamSocket::Listener
 {
 public:
     class Listener {
@@ -22,32 +21,23 @@ public:
     };
 
 public:
-    struct Options {
-        uv_loop_t               *loop;
-        std::string              file;
-        Listener                *listener;
-        uint32_t                 slot;
-    };
-
-public:
-    Worker(Options &opt);
+    Worker(uv_loop_t *loop);
     virtual ~Worker();
 
-    void SetUnixStreamSocket(std::shared_ptr<UnixStreamSocket> channel);
+    int Start(int slot, std::string file);
     int SetListener(Listener *listener);
-    int Spawn();
-    int SetPipe();
 
 public:
     void OnWorkerExited(uv_process_t *req, int64_t status, int termSignal);
 
-// PipeServer listener
+// UnixStreamSocket listener
 public:
-    virtual void OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel) override;
-    virtual void OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel) override;
-    virtual void OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload) override;
+    virtual void OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload) override;
+    virtual void OnChannelClosed(pingos::UnixStreamSocket* channel) override;
 
 protected:
+    int InitChannels();
+    int Spawn();
     int ChannelSend(std::string data);
 
 public:
@@ -57,13 +47,20 @@ public:
 private:
     uv_process_options_t m_options;
     uv_process_t         m_process;
-    Options              m_opt;
-    PipeClient          *m_pipeClient[4] { nullptr, nullptr };
-    UnixStreamSocket    *m_channel[4] { nullptr };
-    PipeServer          *m_pipeServer[2] { nullptr };
-    std::string          m_pipeFile;
-    std::string          m_pipePayloadFile;
-    char               **m_args;
+    Listener            *m_listener {nullptr};
+    UnixStreamSocket    *m_channelIn { nullptr };
+    UnixStreamSocket    *m_channelOut { nullptr };
+    UnixStreamSocket    *m_payloadChannelIn { nullptr };
+    UnixStreamSocket    *m_payloadChannelOut { nullptr };
+
+    Pipe                 m_channelPipe;
+    Pipe                 m_payloadChannelPipe;
+
+    char               **m_args { nullptr };
+    int                  m_slot { -1 };
+    uv_loop_t           *m_loop { nullptr };
+    std::string          m_file { "" };
+
     uv_stdio_container_t childStdio[7];
     char *env[2];
 };

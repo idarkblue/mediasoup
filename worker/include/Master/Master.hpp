@@ -46,7 +46,7 @@ protected:
     int Send2Worker(uint32_t slot, std::string payload);
 
 protected:
-    virtual Worker* NewWorker(Worker::Options &opt) = 0;
+    virtual Worker* NewWorker(uv_loop_t *loop) = 0;
     virtual void DeleteWorker(Worker *worker) = 0;
 
 // Worker process listener
@@ -56,7 +56,7 @@ public:
 protected:
     uint32_t                                  m_workers { 0 };
     std::string                               m_execDir { "./" };
-    std::string                               m_workerPath { "" };
+    std::string                               m_workerFile { "" };
     std::string                               m_workerName { "" };
     std::map<uint32_t, Worker*>               m_slotWorkerMap;
 };

@@ -27,9 +27,9 @@ RtcWorker* RtcMaster::FindWorker(uint32_t slot)
     return nullptr;
 }
 
-Worker* RtcMaster::NewWorker(Worker::Options &opt)
+Worker* RtcMaster::NewWorker(uv_loop_t *loop)
 {
-    return new RtcWorker(opt);
+    return new RtcWorker(loop);
 }
 
 void RtcMaster::DeleteWorker(Worker *worker)

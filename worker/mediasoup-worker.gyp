@@ -338,6 +338,7 @@
       'sources':
       [
         # C++ source files.
+        'src/Master/Pipe.cpp',
         'src/Master/Configuration.cpp',
         'src/Master/RtcServer.cpp',
         'src/Master/RtcMaster.cpp',

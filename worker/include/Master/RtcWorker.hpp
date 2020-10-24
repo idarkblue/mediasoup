@@ -18,7 +18,7 @@ namespace pingos {
 class RtcWorker : public Worker
 {
 public:
-    RtcWorker(Worker::Options &opt);
+    RtcWorker(uv_loop_t *loop);
     virtual ~RtcWorker();
 
     int SendRequest(RtcSession *rtcSession, RtcSession::Request &request);

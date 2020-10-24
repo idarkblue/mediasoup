@@ -13,7 +13,7 @@ public:
     RtcWorker* FindWorker(uint32_t slot);
 
 protected:
-    virtual Worker* NewWorker(Worker::Options &opt) override;
+    virtual Worker* NewWorker(uv_loop_t *loop) override;
     virtual void DeleteWorker(Worker *worker) override;
 };
 

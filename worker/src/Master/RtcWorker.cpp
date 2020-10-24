@@ -9,7 +9,7 @@ namespace pingos {
 
 std::unordered_map<std::string, RtcStream*> RtcWorker::m_streamsMap;
 
-RtcWorker::RtcWorker(Worker::Options &opt): Worker(opt)
+RtcWorker::RtcWorker(uv_loop_t *loop): Worker(loop)
 {
 }
 

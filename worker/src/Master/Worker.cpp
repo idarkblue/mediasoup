@@ -7,13 +7,9 @@ namespace pingos {
 
 static char MEDIASOUP_VERSION_STRING[] = "MEDIASOUP_VERSION=3.1.15";
 
-Worker::Worker(Options &opt)
+Worker::Worker(uv_loop_t *loop) :
+    m_loop(loop), m_channelPipe(loop), m_payloadChannelPipe(loop)
 {
-    m_opt = opt;
-
-    m_pipeFile = Configuration::master.unixSocketPath + ".channel." + std::to_string(opt.slot);
-    m_pipePayloadFile = Configuration::master.unixSocketPath + ".payload." + std::to_string(opt.slot);
-
     std::vector<std::string> vecArgs;
 
     for (auto &tag : Configuration::log.workerTags) {
@@ -60,46 +56,34 @@ Worker::Worker(Options &opt)
 
 Worker::~Worker()
 {
-    delete m_pipeClient[0];
-    delete m_pipeClient[1];
-    delete m_pipeClient[2];
-    delete m_pipeClient[3];
-
-    delete m_pipeServer[0];
-    delete m_pipeServer[1];
 }
 
-int Worker::SetPipe()
+int Worker::InitChannels()
 {
-// channel
-    m_pipeServer[0] = new PipeServer(m_opt.loop);
-    m_pipeServer[0]->SetListener(this);
-    m_pipeServer[0]->Listen(m_pipeFile);
+    m_channelIn = new pingos::UnixStreamSocket(&m_channelPipe.parentIn, this, ::UnixStreamSocket::Role::PRODUCER);
+    m_channelOut = new pingos::UnixStreamSocket(&m_channelPipe.parentOut, this, ::UnixStreamSocket::Role::CONSUMER);
 
-    m_pipeClient[0] = new PipeClient(m_opt.loop);
-    m_pipeClient[0]->Connect(m_pipeFile);
+    m_payloadChannelIn = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentIn, this, ::UnixStreamSocket::Role::PRODUCER);
+    m_payloadChannelOut = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentOut, this, ::UnixStreamSocket::Role::CONSUMER);
 
-    m_pipeClient[1] = new PipeClient(m_opt.loop);
-    m_pipeClient[1]->Connect(m_pipeFile);
-
-// payload channel
-    m_pipeServer[1] = new PipeServer(m_opt.loop);
-    m_pipeServer[1]->SetListener(this);
-    m_pipeServer[1]->Listen(m_pipePayloadFile);
-
-    m_pipeClient[2] = new PipeClient(m_opt.loop);
-    m_pipeClient[2]->Connect(m_pipePayloadFile);
-
-    m_pipeClient[3] = new PipeClient(m_opt.loop);
-    m_pipeClient[3]->Connect(m_pipePayloadFile);
+    m_channelPipe.CloseCurrntProcessPipe();
+    m_payloadChannelPipe.CloseCurrntProcessPipe();
 
     return 0;
 }
 
+int Worker::Start(int slot, std::string file)
+{
+    m_slot = slot;
+    m_file =file;
+
+    this->InitChannels();
+
+    return this->Spawn();
+}
+
 int Worker::Spawn()
 {
-    //this->SetPipe();
-
     env[0] = MEDIASOUP_VERSION_STRING;
     env[1] = nullptr;
 
@@ -113,16 +97,16 @@ int Worker::Spawn()
     childStdio[2].data.fd = 2;
 
     childStdio[3].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
-    childStdio[3].data.stream = (uv_stream_t *)(m_pipeClient[0]->GetPipeHandle());
+    childStdio[3].data.stream = (uv_stream_t *)(&m_channelPipe.childIn);
 
     childStdio[4].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
-    childStdio[4].data.stream = (uv_stream_t *)(m_pipeClient[1]->GetPipeHandle());
+    childStdio[4].data.stream = (uv_stream_t *)(&m_channelPipe.childOut);
 
     childStdio[5].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
-    childStdio[5].data.stream = (uv_stream_t *)(m_pipeClient[2]->GetPipeHandle());
+    childStdio[5].data.stream = (uv_stream_t *)(&m_payloadChannelPipe.childIn);
 
     childStdio[6].flags = static_cast<uv_stdio_flags>(UV_INHERIT_STREAM);
-    childStdio[6].data.stream = (uv_stream_t *)(m_pipeClient[3]->GetPipeHandle());
+    childStdio[6].data.stream = (uv_stream_t *)(&m_payloadChannelPipe.childOut);
 
     m_options.stdio = childStdio;
     m_options.stdio_count = sizeof(childStdio) / sizeof(uv_stdio_container_t);
@@ -131,7 +115,7 @@ int Worker::Spawn()
         auto me = static_cast<Worker*>(req->data);
         me->OnWorkerExited(req, status, termSignal);
     };
-    m_options.file = m_opt.file.c_str();
+    m_options.file = m_file.c_str();
     m_options.args = m_args;
 
     m_options.env = env;
@@ -141,14 +125,14 @@ int Worker::Spawn()
 
     int ret = 0;
     do {
-        ret = ::uv_spawn(m_opt.loop, &m_process, &m_options);
+        ret = ::uv_spawn(m_loop, &m_process, &m_options);
         if (ret != 0) {
             PMS_ERROR("Spawn [worker-{}][file {}] {} {}",
-                m_opt.slot, m_opt.file, ret, ::uv_err_name(ret));
+                m_slot, m_file, ret, ::uv_err_name(ret));
             //return -1;
         } else {
             PMS_INFO("Spawn [worker-{}][file {}] success\n",
-                m_opt.slot, m_opt.file);
+                m_slot, m_file);
         }
     } while (ret != 0);
 
@@ -158,91 +142,64 @@ int Worker::Spawn()
 void Worker::OnWorkerExited(uv_process_t *req, int64_t status, int termSignal)
 {
     PMS_ERROR("Worker process[{}] exited\r\n", req->pid);
-    if (m_opt.listener) {
-        m_opt.listener->OnWorkerExited(this);
+    if (m_listener) {
+        m_listener->OnWorkerExited(this);
     }
 }
 
-void Worker::OnChannelAccept(PipeServer *ps, UnixStreamSocket *channel)
-{
-    if (ps == m_pipeServer[0]) {
-        PMS_INFO("[Worker-{} {}] accept channel connection, role {}, server0",
-                m_opt.slot, m_process.pid, (int)channel->GetRole());
-        if (channel->GetRole() == ::UnixStreamSocket::Role::PRODUCER) {
-            m_channel[0] = channel;
-        } else if (channel->GetRole() == ::UnixStreamSocket::Role::CONSUMER) {
-            m_channel[1] = channel;
-        }
-    } else if (ps == m_pipeServer[1]) {
-        PMS_INFO("[Worker-{} {}] accept channel connection, role {}, server1",
-                m_opt.slot, m_process.pid, (int)channel->GetRole());
-        if (channel->GetRole() == ::UnixStreamSocket::Role::PRODUCER) {
-            m_channel[2] = channel;
-        } else if (channel->GetRole() == ::UnixStreamSocket::Role::CONSUMER) {
-            m_channel[3] = channel;
-        }
-    }
-
-    if (m_channel[0] != nullptr && m_channel[1] != nullptr &&
-        m_channel[2] != nullptr && m_channel[3] != nullptr)
-    {
-        this->Spawn();
-    }
-}
-
-void Worker::OnChannelClosed(PipeServer *ps, UnixStreamSocket *channel)
-{
-    
-}
-
-void Worker::OnChannelRecv(PipeServer *ps, UnixStreamSocket *channel, std::string_view &payload)
+void Worker::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload)
 {
     switch (payload[0]) {
         // 123 = '{' (a Channel JSON messsage).
         case 123:
-            PMS_DEBUG("[worker-{} {}] Channel message: {}", m_opt.slot, m_process.pid, payload);
+            PMS_DEBUG("[worker-{} {}] Channel message: {}", m_slot, m_process.pid, payload);
             this->ReceiveChannelMessage(payload);
             break;
 
         // 68 = 'D' (a debug log).
         case 68:
             payload.remove_prefix(1);
-            PMS_DEBUG("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_DEBUG("[worker-{} {}] => {}", m_slot, m_process.pid, payload);
             break;
 
         // 87 = 'W' (a warn log).
         case 87:
             payload.remove_prefix(1);
-            PMS_WARN("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_WARN("[worker-{} {}] => {}", m_slot, m_process.pid, payload);
             break;
 
         // 69 = 'E' (an error log).
         case 69:
             payload.remove_prefix(1);
-            PMS_ERROR("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_ERROR("[worker-{} {}] => {}", m_slot, m_process.pid, payload);
             break;
 
         // 88 = 'X' (a dump log).
         case 88:
             payload.remove_prefix(1);
-            PMS_INFO("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_INFO("[worker-{} {}] => {}", m_slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
             break;
 
         default:
             payload.remove_prefix(1);
-            PMS_TRACE("[worker-{} {}] => {}", m_opt.slot, m_process.pid, payload);
+            PMS_TRACE("[worker-{} {}] => {}", m_slot, m_process.pid, payload);
             // eslint-disable-next-line no-console
     }
 }
 
+void Worker::OnChannelClosed(pingos::UnixStreamSocket* channel)
+{
+
+}
+
 int Worker::ChannelSend(std::string data)
 {
-    if (m_channel[0]) {
-        m_channel[0]->SendString(data);
-        PMS_DEBUG("[Worker-{} {}] Send Data: {}", m_opt.slot, m_process.pid, data);
+    if (m_channelOut) {
+        m_channelOut->SendString(data);
+        PMS_DEBUG("[Worker-{} {}] Send Data: {}", m_slot, m_process.pid, data);
     } else {
-        PMS_ERROR("[Worker-{} {}] channel ptr is null", m_opt.slot, m_process.pid);
+        PMS_ERROR("[Worker-{} {}] channel ptr is null", m_slot, m_process.pid);
     }
 
     return 0;

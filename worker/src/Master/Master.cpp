@@ -76,23 +76,23 @@ void Master::SetPath()
         execPath = path.substr(0, pos + 1);
     }
 
-    m_workerPath = execPath + m_workerName;
+    m_workerFile = execPath + m_workerName;
 }
 
 void Master::CreateWorkers()
 {
+    int slot = 0;
     for (uint32_t i = 0; i < m_workers; i++) {
+        auto worker = this->NewWorker(Master::Loop);
 
-        Worker::Options opt = {
-            .loop     = Master::Loop,
-            .file     = m_workerPath,
-            .listener = this,
-            .slot     = i
-        };
+        if (!worker || worker->Start(slot, m_workerFile) != 0) {
+            PMS_ERROR("Create worker failed.");
+            continue;
+        }
 
-        auto worker = this->NewWorker(opt);
-        worker->SetPipe();
-        m_slotWorkerMap[i] = worker;
+        m_slotWorkerMap[slot] = worker;
+
+        slot++;
     }
 }
 
