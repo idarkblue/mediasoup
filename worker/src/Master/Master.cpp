@@ -26,7 +26,7 @@ Master::~Master()
 
 uint32_t Master::GetWorkerCount()
 {
-    return m_workers;
+    return (uint32_t) m_slotWorkerMap.size();
 }
 
 int Master::Start()
