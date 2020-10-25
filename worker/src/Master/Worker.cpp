@@ -60,14 +60,11 @@ Worker::~Worker()
 
 int Worker::InitChannels()
 {
-    m_channelIn = new pingos::UnixStreamSocket(&m_channelPipe.parentIn, this, ::UnixStreamSocket::Role::PRODUCER);
-    m_channelOut = new pingos::UnixStreamSocket(&m_channelPipe.parentOut, this, ::UnixStreamSocket::Role::CONSUMER);
+    m_channelIn = new pingos::UnixStreamSocket(&m_channelPipe.parentIn, this, ::UnixStreamSocket::Role::CONSUMER);
+    m_channelOut = new pingos::UnixStreamSocket(&m_channelPipe.parentOut, this, ::UnixStreamSocket::Role::PRODUCER);
 
-    m_payloadChannelIn = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentIn, this, ::UnixStreamSocket::Role::PRODUCER);
-    m_payloadChannelOut = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentOut, this, ::UnixStreamSocket::Role::CONSUMER);
-
-    m_channelPipe.CloseCurrntProcessPipe();
-    m_payloadChannelPipe.CloseCurrntProcessPipe();
+    m_payloadChannelIn = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentIn, this, ::UnixStreamSocket::Role::CONSUMER);
+    m_payloadChannelOut = new pingos::UnixStreamSocket(&m_payloadChannelPipe.parentOut, this, ::UnixStreamSocket::Role::PRODUCER);
 
     return 0;
 }
@@ -124,6 +121,8 @@ int Worker::Spawn()
     m_process.data = this;
 
     int ret = 0;
+    int maxRetries = 5;
+    int count = 0;
     do {
         ret = ::uv_spawn(m_loop, &m_process, &m_options);
         if (ret != 0) {
@@ -134,7 +133,14 @@ int Worker::Spawn()
             PMS_INFO("Spawn [worker-{}][file {}] success\n",
                 m_slot, m_file);
         }
-    } while (ret != 0);
+    } while (ret != 0 && ++count <= maxRetries);
+
+    if (ret != 0) {
+        return -1;
+    }
+
+    m_channelPipe.CloseCurrntProcessPipe();
+    m_payloadChannelPipe.CloseCurrntProcessPipe();
 
     return 0;
 }

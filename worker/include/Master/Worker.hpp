@@ -53,12 +53,12 @@ private:
     UnixStreamSocket    *m_payloadChannelIn { nullptr };
     UnixStreamSocket    *m_payloadChannelOut { nullptr };
 
+    uv_loop_t           *m_loop { nullptr };
     Pipe                 m_channelPipe;
     Pipe                 m_payloadChannelPipe;
 
     char               **m_args { nullptr };
     int                  m_slot { -1 };
-    uv_loop_t           *m_loop { nullptr };
     std::string          m_file { "" };
 
     uv_stdio_container_t childStdio[7];
