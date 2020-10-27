@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="index.css" />
+    <title>PingOS WebRTC</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        video {
+            max-width: 100%;
+            width: 320px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        地址：<input type="text" id="url" value="wss://live.pingos.io:8889/"/>
+    </div>
+    <div id="divPublisher">
+        流名：<input type="text" id="publishStreamId" value="123456" />
+        <button id="publish">推流</button>
+        <button id="publishStop">停止</button>
+        <video id="localVideo" autoplay muted ></video>
+    </div>
+
+    <div id="divPlayer">
+        流名：<input type="text" id="playStreamId" value="123456" />
+        <button id="play">播放</button>
+        <button id="playStop">停止</button>
+        <video id="remoteVideo" autoplay ></video>
+    </div>
+    <script src="./main.js"></script>
+</body>
+</html>
