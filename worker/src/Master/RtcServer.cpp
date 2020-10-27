@@ -107,9 +107,8 @@ int RtcServer::OnMessage(NetConnection *nc)
         goto _error;
     }
 
-    request.Parse(jsonObject);
-
     try {
+        request.Parse(jsonObject);
         int ret = 0;
         switch (request.methodId) {
             case RtcRequest::MethodId::STREAM_PUBLISH:
