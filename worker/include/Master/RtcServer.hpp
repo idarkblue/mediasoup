@@ -52,6 +52,7 @@ protected:
     int PlayStream(RtcRequest *request);
     int MuteStream(RtcRequest *request);
     int CloseStream(RtcRequest *request);
+    int Heartbeat(RtcRequest *request);
 
 protected:
     RtcWorker* FindWorkerByStreamId(std::string streamId);

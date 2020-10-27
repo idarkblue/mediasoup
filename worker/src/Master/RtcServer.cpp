@@ -127,6 +127,10 @@ int RtcServer::OnMessage(NetConnection *nc)
             ret = this->CloseStream(&request);
             break;
 
+            case RtcRequest::MethodId::STREAM_HEARTBEAT:
+            ret = this->Heartbeat(&request);
+            break;
+
             default:
             break;
         }
@@ -315,6 +319,11 @@ int RtcServer::CloseStream(RtcRequest *request)
     PMS_INFO("SessionId[{}] StreamId[{}] Closing",
         rtcSession->GetSessionId(), request->stream);
 
+    return 0;
+}
+
+int RtcServer::Heartbeat(RtcRequest *request)
+{
     return 0;
 }
 

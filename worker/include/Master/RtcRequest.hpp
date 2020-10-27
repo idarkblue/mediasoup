@@ -14,7 +14,8 @@ public:
         STREAM_PUBLISH = 1,
         STREAM_PLAY = 2,
         STREAM_MUTE = 3,
-        STREAM_CLOSE = 4
+        STREAM_CLOSE = 4,
+        STREAM_HEARTBEAT = 5
     };
 
     static std::unordered_map<std::string, MethodId> string2MethodId;
