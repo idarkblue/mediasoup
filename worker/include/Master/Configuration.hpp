@@ -17,7 +17,7 @@ struct LogConfiguration {
 
 struct WebsocketConfiguration {
     uint16_t    port; // websocket port
-    bool        ssl;
+    uint16_t    sslPort; // websocket ssl port
     std::string keyFile;
     std::string certFile;
     std::string passPhrase;

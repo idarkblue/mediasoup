@@ -107,9 +107,8 @@ int RtcServer::OnMessage(NetConnection *nc)
         goto _error;
     }
 
-    request.Parse(jsonObject);
-
     try {
+        request.Parse(jsonObject);
         int ret = 0;
         switch (request.methodId) {
             case RtcRequest::MethodId::STREAM_PUBLISH:
@@ -126,6 +125,10 @@ int RtcServer::OnMessage(NetConnection *nc)
 
             case RtcRequest::MethodId::STREAM_CLOSE:
             ret = this->CloseStream(&request);
+            break;
+
+            case RtcRequest::MethodId::STREAM_HEARTBEAT:
+            ret = this->Heartbeat(&request);
             break;
 
             default:
@@ -316,6 +319,11 @@ int RtcServer::CloseStream(RtcRequest *request)
     PMS_INFO("SessionId[{}] StreamId[{}] Closing",
         rtcSession->GetSessionId(), request->stream);
 
+    return 0;
+}
+
+int RtcServer::Heartbeat(RtcRequest *request)
+{
     return 0;
 }
 

@@ -12,7 +12,8 @@ std::unordered_map<std::string, RtcRequest::MethodId> RtcRequest::string2MethodI
         { "stream.publish",    RtcRequest::MethodId::STREAM_PUBLISH },
         { "stream.play",    RtcRequest::MethodId::STREAM_PLAY },
         { "stream.mute",    RtcRequest::MethodId::STREAM_MUTE },
-        { "stream.close",    RtcRequest::MethodId::STREAM_CLOSE }
+        { "stream.close",    RtcRequest::MethodId::STREAM_CLOSE },
+        { "stream.heartbeat",    RtcRequest::MethodId::STREAM_HEARTBEAT }
     };
 
 RtcRequest::RtcRequest(NetConnection *netConnection) : nc(netConnection)

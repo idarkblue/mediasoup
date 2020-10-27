@@ -229,10 +229,6 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
                 jsonErrorIt = jsonObject.find("error");
             }
         }
-
-        jsonObject = json::object();
-        jsonObject["data"]["sdp"] = sdp;
-
         break;
 
         default:
@@ -252,6 +248,11 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
         JSON_READ_VALUE_DEFAULT(jsonObject, "reason", std::string, reason, "");
         jsonAck["reason"] = reason;
     } else {
+        if (!sdp.empty()) {
+            jsonObject = json::object();
+            jsonObject["data"]["sdp"] = sdp;
+        }
+
         jsonAck["error"] = 0;
         jsonAck["reason"] = "OK";
         jsonAck["data"] = jsonObject["data"];
