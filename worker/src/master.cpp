@@ -38,13 +38,23 @@ int main(int argc, char **argv)
     pingos::RtcMaster master;
     pingos::RtcServer rtc;
 
-    if (pingos::Configuration::websocket.ssl) {
-        ws.Accept(pingos::Configuration::websocket.port,
+    if (!pingos::Configuration::websocket.certFile.empty() &&
+        !pingos::Configuration::websocket.keyFile.empty() &&
+        pingos::Configuration::websocket.sslPort)
+    {
+        if (ws.Accept(pingos::Configuration::websocket.sslPort,
             pingos::Configuration::websocket.keyFile,
             pingos::Configuration::websocket.certFile,
-            pingos::Configuration::websocket.passPhrase);
-    } else {
-        ws.Accept(pingos::Configuration::websocket.port);
+            pingos::Configuration::websocket.passPhrase) != 0)
+        {
+            return -1;
+        }
+    }
+
+    if (pingos::Configuration::websocket.port) {
+        if (ws.Accept(pingos::Configuration::websocket.port) != 0) {
+            return -1;
+        }
     }
 
     rtc.Start(&ws, &master);
@@ -52,4 +62,6 @@ int main(int argc, char **argv)
     master.Start();
 
     pingos::Loop::Run();
+
+    return 0;
 }

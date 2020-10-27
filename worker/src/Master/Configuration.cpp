@@ -83,8 +83,8 @@ int Configuration::Load()
         JSON_READ_VALUE_DEFAULT(*jsonLogIt, "fileLevel", std::string, log.fileLevel, "info");
         JSON_READ_VALUE_DEFAULT(*jsonLogIt, "consolLevel", std::string, log.consolLevel, "info");
 
-        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "port", uint16_t, websocket.port, 80);
-        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "ssl", bool, websocket.ssl, false);
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "port", uint16_t, websocket.port, 0);
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "sslPort", uint16_t, websocket.sslPort, 0);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "keyFile", std::string, websocket.keyFile, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "certFile", std::string, websocket.certFile, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "passPhrase", std::string, websocket.passPhrase, "");
