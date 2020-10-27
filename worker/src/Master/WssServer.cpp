@@ -101,9 +101,9 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
     }).listen(port, [this, port](auto *token) {
         m_listenSocket = token;
         if (token) {
-            PMS_INFO("WebSocket is listening on port {}", port);
+            PMS_INFO("WebSocket ssl is listening on port {}", port);
         } else {
-            PMS_ERROR("WebSocket is listening on port {} failed", port);
+            PMS_ERROR("WebSocket ssl is listening on port {} failed", port);
         }
     });
 
@@ -114,7 +114,7 @@ void WssServer::OnOpen(void *c, uWS::HttpRequest *req, bool ssl)
 {
     NetConnection *nc;
 
-    PMS_INFO("WS connection ptr {}, success", c);
+    PMS_INFO("WS connection ptr {}, ssl {}", c, ssl);
 
     if (ssl) {
         uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)c;
