@@ -323,3 +323,28 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 }
 
 ```
+
+## 2.7 stream.heartbeat 心跳
+
+### 2.7.1 请求
+
+```json
+{
+    "version": "1.0",
+    "method": "stream.heartbeat",
+    "stream": "xxx",
+    "data": { }
+}
+```
+
+### 2.7.1 返回
+
+```json
+{
+    "version": "1.0",
+    "err": 0,
+    "err_msg": "succeed",
+    "method": "stream.heartbeat",
+    "data":{ }
+}
+```
