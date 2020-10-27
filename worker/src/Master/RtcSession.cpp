@@ -230,6 +230,7 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
             }
         }
 
+        jsonObject = json::object();
         jsonObject["data"]["sdp"] = sdp;
 
         break;

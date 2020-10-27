@@ -230,7 +230,7 @@ int WssServer::ReplyString(NetConnection *nc, std::string data)
 
         ws->send(data, uWS::OpCode::TEXT);
     } else {
-        uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)nc->GetConnectionHandler();
+        uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)nc->GetConnectionHandler();
 
         ws->send(data, uWS::OpCode::TEXT);
     }
