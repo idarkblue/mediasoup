@@ -942,7 +942,13 @@ int RtcSession::FillOffer(std::string &sdp)
         // sdp: media: port (ignore)
         jsonMedia["port"] = 9;
         // sdp: media: protocol
-        jsonMedia["protocol"] = "RTP/SAVPF";
+        jsonMedia["protocol"] = "UDP/TLS/RTP/SAVPF";
+
+        jsonMedia["rtcp"]["address"] = "0.0.0.0";
+        jsonMedia["rtcp"]["ipVer"] = 4;
+        jsonMedia["rtcp"]["netType"] = "IN";
+        jsonMedia["rtcp"]["port"] = 9;
+
         // sdp: media: rtcpMux
         jsonMedia["rtcpMux"] = "rtcp-mux";
         // sdp: media: rtcpRsize
@@ -951,6 +957,9 @@ int RtcSession::FillOffer(std::string &sdp)
         jsonMedia["xGoogleFlag"] = "conference";
         // sdp: media: type (audio or video)
         jsonMedia["type"] = consumer.kind;
+        jsonMedia["connection"]["ip"] = "0.0.0.0";
+        jsonMedia["connection"]["version"] = 4;
+        jsonMedia["icelite"] = "ice-lite";
 
         mids += consumer.rtpParameters.mid + " ";
     }
@@ -967,9 +976,6 @@ int RtcSession::FillOffer(std::string &sdp)
 
     jsonSdp["groups"].push_back(jsonGroup);
 
-    jsonSdp["connection"]["ip"] = "127.0.0.1";
-    jsonSdp["connection"]["version"] = 4;
-    jsonSdp["icelite"] = "ice-lite";
     jsonSdp["msidSemantic"]["semantic"] = "WMS";
     jsonSdp["msidSemantic"]["token"] = OfferMslabel;
     jsonSdp["name"] = "-";
@@ -1134,7 +1140,13 @@ int RtcSession::FillAnswer(std::string &sdp)
         // sdp: media: port (ignore)
         jsonMedia["port"] = 9;
         // sdp: media: protocol
-        jsonMedia["protocol"] = "RTP/SAVPF";
+        jsonMedia["protocol"] = "UDP/TLS/RTP/SAVPF";
+
+        jsonMedia["rtcp"]["address"] = "0.0.0.0";
+        jsonMedia["rtcp"]["ipVer"] = 4;
+        jsonMedia["rtcp"]["netType"] = "IN";
+        jsonMedia["rtcp"]["port"] = 9;
+
         // sdp: media: rtcpMux
         jsonMedia["rtcpMux"] = "rtcp-mux";
         // sdp: media: rtcpRsize
@@ -1143,6 +1155,9 @@ int RtcSession::FillAnswer(std::string &sdp)
         jsonMedia["xGoogleFlag"] = "conference";
         // sdp: media: type (audio or video)
         jsonMedia["type"] = producer.kind;
+        jsonMedia["connection"]["ip"] = "0.0.0.0";
+        jsonMedia["connection"]["version"] = 4;
+        jsonMedia["icelite"] = "ice-lite";
 
         mids += producer.rtpParameters.mid + " ";
     }
@@ -1159,9 +1174,6 @@ int RtcSession::FillAnswer(std::string &sdp)
 
     jsonSdp["groups"].push_back(jsonGroup);
 
-    jsonSdp["connection"]["ip"] = "127.0.0.1";
-    jsonSdp["connection"]["version"] = 4;
-    jsonSdp["icelite"] = "ice-lite";
     jsonSdp["msidSemantic"]["semantic"] = "WMS";
     jsonSdp["msidSemantic"]["token"] = "*";
     jsonSdp["name"] = "-";
