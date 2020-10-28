@@ -101,7 +101,8 @@ public:
         std::vector<ProducerParameters> &producerParameters);
 
     // Consumer
-    int TransformSdp(WebRtcTransportParameters &rtcTransportParameters);
+    int TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
+        std::vector<ConsumerParameters> &consumerParameters);
 
 protected:
     // webrtc transport parameters

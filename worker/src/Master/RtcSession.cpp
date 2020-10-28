@@ -346,10 +346,20 @@ int RtcSession::Play(std::string sdp)
 {
     SdpInfo si(sdp);
 
-    if (si.TransformSdp(m_rtcTransportParameters) != 0) {
+    if (si.TransformSdp(m_rtcTransportParameters, m_consumerParameters) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, Transform sdp error",
             m_sessionId, m_streamId);
         return -1;
+    }
+
+    int i = 0;
+    for (auto &producer : m_producerParameters) {
+        auto &consumer = m_consumerParameters[i];
+        if (consumer.SetRtpParameters(producer) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] Set consumer's rtp parameters failed",
+                m_sessionId, m_streamId);
+            return -1;
+        }
     }
 
     Request request;
@@ -495,17 +505,7 @@ void RtcSession::AddLocalAddress(std::string ip, std::string announcedIp)
 
 int RtcSession::SetProducerParameters(RtcSession &rtcSession)
 {
-    std::vector<ProducerParameters> &producerParameters = rtcSession.GetProducerParameters();
-
-    for (auto &producer : producerParameters) {
-        m_consumerParameters.emplace_back();
-        auto &consumer = m_consumerParameters.back();
-        if (consumer.SetRtpParameters(producer) != 0) {
-            PMS_ERROR("SessionId[{}] StreamId[{}] Set consumer's rtp parameters failed",
-                m_sessionId, m_streamId);
-            return -1;
-        }
-    }
+    m_producerParameters = rtcSession.GetProducerParameters();
 
     m_videoProducerId = rtcSession.GetProducerId("video");
     m_audioProducerId = rtcSession.GetProducerId("audio");

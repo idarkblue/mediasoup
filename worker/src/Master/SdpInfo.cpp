@@ -140,6 +140,12 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
     this->type = "simple";
     this->kind = producer.kind;
     this->paused = producer.paused;
+    std::vector<RTC::RtpHeaderExtensionParameters> headerExtensions;
+
+    headerExtensions = this->rtpParameters.headerExtensions;
+    std::string mid = this->rtpParameters.mid;
+    auto codecs = this->rtpParameters.codecs;
+
     try {
         json jsonObject = json::object();
         producer.rtpParameters.FillJson(jsonObject);
@@ -163,7 +169,7 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
         cp.ssrc = encoding.mappedSsrc;
         i++;
     }
-
+/*
     for (auto &codec : this->rtpParameters.codecs) {
         if (producer.rtpMapping.codecs.count(codec.payloadType) == 0) {
             continue;
@@ -198,72 +204,17 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
             }
         }
     }
-
-    if (this->kind == "audio") {
-        this->rtpParameters.headerExtensions.clear();
-        json jsonParameters = json::parse(R"(
-            {
-                "uri":"http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
-                "id":4
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-
-        jsonParameters = json::parse(R"(
-            {
-                "uri":"urn:ietf:params:rtp-hdrext:ssrc-audio-level",
-                "id":10
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-    } else if (this->kind == "video") {
-        this->rtpParameters.headerExtensions.clear();
-        json jsonParameters = json::parse(R"(
-            {
-                "uri":"http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
-                "id":4
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-
-        // jsonParameters = json::parse(R"(
-        //     {
-        //         "uri":"http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01",
-        //         "id":5
-        //     }
-        // )");
-        // this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-
-        jsonParameters = json::parse(R"(
-            {
-                "uri":"http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07",
-                "id":6
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-
-        jsonParameters = json::parse(R"(
-            {
-                "uri":"urn:3gpp:video-orientation",
-                "id":11
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-
-        jsonParameters = json::parse(R"(
-            {
-                "uri":"urn:ietf:params:rtp-hdrext:toffset",
-                "id":12
-            }
-        )");
-        this->rtpParameters.headerExtensions.push_back(RTC::RtpHeaderExtensionParameters(jsonParameters));
-    }
     for (auto &encoding : this->rtpParameters.encodings) {
         if (producer.rtpMapping.codecs.count(encoding.codecPayloadType) == 0) {
             continue;
         }
         encoding.codecPayloadType = producer.rtpMapping.codecs[encoding.codecPayloadType];
     }
+*/
+
+    this->rtpParameters.headerExtensions = headerExtensions;
+    this->rtpParameters.mid = mid;
+    this->rtpParameters.codecs = codecs;
 
     return 0;
 }
@@ -326,9 +277,10 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
 }
 
 // Consumer
-int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters)
+int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters, std::vector<ConsumerParameters> &consumerParameters)
 {
     json jsonSdp;
+
     try {
         jsonSdp = sdptransform::parse(m_sdp);
     } catch (const json::parse_error &error) {
@@ -336,7 +288,49 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters)
         return -1;
     }
 
-    return ParseWebRtcTransport(jsonSdp, rtcParameters);
+    if (ParseWebRtcTransport(jsonSdp, rtcParameters) != 0) {
+        PMS_ERROR("Parse transport parameters failed");
+        return -1;
+    }
+
+    auto jsonMediaIt = jsonSdp.find("media");
+    if (jsonMediaIt == jsonSdp.end() && jsonMediaIt->is_array()) {
+        PMS_ERROR("Invalid sdp, 'media' object needed");
+
+        return -1;
+    }
+
+    for (auto &jsonRtp : *jsonMediaIt) {
+        ConsumerParameters consumer;
+        auto jsonTypeIt = jsonRtp.find("type");
+        if (jsonTypeIt == jsonRtp.end()) {
+            PMS_ERROR("Invalid sdp, 'media's type' item needed");
+
+            return -1;
+        }
+
+        JSON_READ_VALUE_ASSERT(jsonRtp, "mid", std::string, consumer.rtpParameters.mid);
+
+        auto jsonExtIt = jsonRtp.find("ext");
+        if (jsonExtIt != jsonRtp.end() && jsonExtIt->is_array()) {
+            if (ParseHeaderExtensions(*jsonExtIt, consumer.rtpParameters.headerExtensions) != 0) {
+                PMS_ERROR("Invalid sdp, parse ext faile.");
+                return -1;
+            }
+        }
+
+        if (ParseCodecs(jsonRtp, consumer.rtpParameters.codecs) != 0) {
+            PMS_ERROR("Invalid sdp, parse codecs failed");
+            return -1;
+        }
+
+        consumer.kind = jsonTypeIt->get<std::string>();
+        consumer.paused = false;
+
+        consumerParameters.push_back(consumer);
+    }
+
+    return 0;
 }
 
 int SdpInfo::ParseWebRtcTransport(json &jsonSdp, WebRtcTransportParameters &rtcTransportParameters)
@@ -498,7 +492,7 @@ int SdpInfo::ParseHeaderExtensions(json &jsonHeaderExtensions, std::vector<RTC::
         ext.type = RTC::RtpHeaderExtensionUri::GetType(ext.uri);
 
         if (ext.type == RTC::RtpHeaderExtensionUri::Type::UNKNOWN) {
-            PMS_ERROR("Header extension not supported, {}", ext.uri);
+            PMS_ERROR("Header extension not supported, {} {}", ext.uri, ext.id);
             continue;
         }
 
