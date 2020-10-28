@@ -354,11 +354,16 @@ int RtcSession::Play(std::string sdp)
 
     int i = 0;
     for (auto &producer : m_producerParameters) {
-        auto &consumer = m_consumerParameters[i];
-        if (consumer.SetRtpParameters(producer) != 0) {
-            PMS_ERROR("SessionId[{}] StreamId[{}] Set consumer's rtp parameters failed",
-                m_sessionId, m_streamId);
-            return -1;
+        for (auto &consumer : m_consumerParameters) {
+            if (producer.kind != consumer.kind) {
+                continue;
+            }
+
+            if (consumer.SetRtpParameters(producer) != 0) {
+                PMS_ERROR("SessionId[{}] StreamId[{}] Set consumer's rtp parameters failed",
+                    m_sessionId, m_streamId);
+                return -1;
+            }
         }
     }
 
