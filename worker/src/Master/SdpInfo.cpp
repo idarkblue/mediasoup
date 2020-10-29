@@ -396,7 +396,7 @@ int SdpInfo::ParseWebRtcTransport(json &jsonSdp, WebRtcTransportParameters &rtcT
         return -1;
     }
 
-    JSON_READ_VALUE_ASSERT(jsonSdp["origin"], "sessionId", std::string, rtcTransportParameters.sessionId);
+    JSON_READ_VALUE_ASSERT(jsonSdp["origin"], "sessionId", uint64_t, rtcTransportParameters.sessionId);
     JSON_READ_VALUE_ASSERT(jsonSdp["origin"], "username", std::string, rtcTransportParameters.uesrName);
 
     return 0;

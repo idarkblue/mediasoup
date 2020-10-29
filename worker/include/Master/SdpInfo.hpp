@@ -51,7 +51,7 @@ struct WebRtcTransportParameters {
 
     int maxSctpMessageSize { 0 };
     bool isDataChannel { 0 };
-    std::string sessionId;
+    uint64_t sessionId;
     std::string uesrName;
 
 public:
