@@ -51,6 +51,8 @@ struct WebRtcTransportParameters {
 
     int maxSctpMessageSize { 0 };
     bool isDataChannel { 0 };
+    std::string sessionId;
+    std::string uesrName;
 
 public:
     void AddLocalAddr(std::string ip, std::string announcedIp);

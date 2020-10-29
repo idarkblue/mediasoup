@@ -352,7 +352,6 @@ int RtcSession::Play(std::string sdp)
         return -1;
     }
 
-    int i = 0;
     for (auto &producer : m_producerParameters) {
         for (auto &consumer : m_consumerParameters) {
             if (producer.kind != consumer.kind) {
@@ -959,7 +958,7 @@ int RtcSession::FillOffer(std::string &sdp)
         // sdp: media: rtcpRsize
         jsonMedia["rtcpRsize"] = "rtcp-rsize";
         // sdp: media: x-google-flag
-        jsonMedia["xGoogleFlag"] = "conference";
+//        jsonMedia["xGoogleFlag"] = "conference";
         // sdp: media: type (audio or video)
         jsonMedia["type"] = consumer.kind;
         jsonMedia["connection"]["ip"] = "0.0.0.0";
@@ -987,9 +986,9 @@ int RtcSession::FillOffer(std::string &sdp)
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;
     jsonSdp["origin"]["netType"] = "IN";
-    jsonSdp["origin"]["sessionId"] =  std::time(nullptr);
+    jsonSdp["origin"]["sessionId"] = m_rtcTransportParameters.sessionId;
     jsonSdp["origin"]["sessionVersion"] = 2;
-    jsonSdp["origin"]["username"] = "pingos-rtc";
+    jsonSdp["origin"]["username"] = m_rtcTransportParameters.uesrName;
 
     jsonSdp["timing"]["start"] = 0;
     jsonSdp["timing"]["stop"] = 0;
@@ -1157,7 +1156,7 @@ int RtcSession::FillAnswer(std::string &sdp)
         // sdp: media: rtcpRsize
         jsonMedia["rtcpRsize"] = "rtcp-rsize";
         // sdp: media: x-google-flag
-        jsonMedia["xGoogleFlag"] = "conference";
+//        jsonMedia["xGoogleFlag"] = "conference";
         // sdp: media: type (audio or video)
         jsonMedia["type"] = producer.kind;
         jsonMedia["connection"]["ip"] = "0.0.0.0";
@@ -1180,14 +1179,14 @@ int RtcSession::FillAnswer(std::string &sdp)
     jsonSdp["groups"].push_back(jsonGroup);
 
     jsonSdp["msidSemantic"]["semantic"] = "WMS";
-    jsonSdp["msidSemantic"]["token"] = "*";
+//    jsonSdp["msidSemantic"]["token"] = "*";
     jsonSdp["name"] = "-";
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;
     jsonSdp["origin"]["netType"] = "IN";
-    jsonSdp["origin"]["sessionId"] =  std::time(nullptr);
+    jsonSdp["origin"]["sessionId"] = m_rtcTransportParameters.sessionId;
     jsonSdp["origin"]["sessionVersion"] = 2;
-    jsonSdp["origin"]["username"] = "pingos-rtc";
+    jsonSdp["origin"]["username"] = m_rtcTransportParameters.uesrName;
 
     jsonSdp["timing"]["start"] = 0;
     jsonSdp["timing"]["stop"] = 0;

@@ -390,6 +390,15 @@ int SdpInfo::ParseWebRtcTransport(json &jsonSdp, WebRtcTransportParameters &rtcT
         }
     }
 
+    auto jsonOriginIt = jsonSdp.find("origin");
+    if (jsonOriginIt == jsonSdp.end()) {
+        PMS_ERROR("Invalid sdp, missing origin");
+        return -1;
+    }
+
+    JSON_READ_VALUE_ASSERT(jsonSdp["origin"], "sessionId", std::string, rtcTransportParameters.sessionId);
+    JSON_READ_VALUE_ASSERT(jsonSdp["origin"], "username", std::string, rtcTransportParameters.uesrName);
+
     return 0;
 }
 
