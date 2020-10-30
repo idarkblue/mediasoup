@@ -278,6 +278,15 @@ namespace RTC
 		packet->SetSsrc(this->rtpParameters.encodings[0].ssrc);
 		packet->SetSequenceNumber(seq);
 
+//		MS_DEBUG_TAG(
+//			  rtp,
+//			  "sending packet [ssrc:%" PRIu32 ", seq:%" PRIu16 ", ts:%" PRIu32
+//			  "] from original [seq:%" PRIu16 "]",
+//			  packet->GetSsrc(),
+//			  packet->GetSequenceNumber(),
+//			  packet->GetTimestamp(),
+//			  origSeq);
+
 		if (isSyncPacket)
 		{
 			MS_DEBUG_TAG(

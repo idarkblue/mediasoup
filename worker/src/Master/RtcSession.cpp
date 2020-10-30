@@ -1137,6 +1137,74 @@ int RtcSession::FillAnswer(std::string &sdp)
             i++;
         }
 
+        // sdp: media: ssrcs
+        json jsonSsrcs = json::array();
+        json jsonGroups = json::array();
+        std::string ssrcGroup = "";
+        for (auto encoding : producer.rtpParameters.encodings) {
+            json jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "cname";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "msid";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "mslabel";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "label";
+            jsonSsrc["id"] = encoding.ssrc;
+            jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            if (!encoding.hasRtx) {
+                continue;
+            }
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "cname";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "msid";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "mslabel";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            jsonSsrc = json::object();
+            jsonSsrc["attribute"] = "label";
+            jsonSsrc["id"] = encoding.rtx.ssrc;
+            jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
+            jsonSsrcs.push_back(jsonSsrc);
+
+            json jsonGroup;
+            jsonGroup["semantics"] = "FID";
+            jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
+            jsonGroups.push_back(jsonGroup);
+        }
+
+        jsonMedia["ssrcs"] = jsonSsrcs;
+        if (jsonGroups.size() > 0) {
+            jsonMedia["ssrcGroups"] = jsonGroups;
+        }
+
         // sdp: media: direction
         jsonMedia["direction"] = "sendrecv";
         // sdp: media: mid
@@ -1221,3 +1289,4 @@ int RtcSession::FillCandidates(json &jsonObject)
 }
 
 }
+
