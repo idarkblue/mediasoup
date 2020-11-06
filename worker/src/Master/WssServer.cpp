@@ -1,6 +1,7 @@
 #include <string>
 #include "Master/Log.hpp"
 #include "Master/WssServer.hpp"
+#include "Master/Configuration.hpp"
 
 #define PMS_CLASS "pingos::WssServer"
 
@@ -26,10 +27,10 @@ int WssServer::Accept(uint16_t port)
 
     m_app->ws<NetConnection>("/*", {
         /* Settings */
-        .compression = uWS::SHARED_COMPRESSOR,
-        .maxPayloadLength = 16 * 1024 * 1024,
-        .idleTimeout = 100,
-        .maxBackpressure = 1 * 1024 * 1204,
+        .compression = uWS::DISABLED,
+        .maxPayloadLength = pingos::Configuration::websocket.maxPayloadLength,
+        .idleTimeout = pingos::Configuration::websocket.idleTimeout,
+        .maxBackpressure = pingos::Configuration::websocket.maxBackpressure,
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {
@@ -75,9 +76,9 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
     m_sslApp->ws<NetConnection>("/*", {
         /* Settings */
         .compression = uWS::DISABLED,
-        .maxPayloadLength = 16 * 1024 * 1024,
-        .idleTimeout = 100,
-        .maxBackpressure = 1 * 1024 * 1204,
+        .maxPayloadLength = pingos::Configuration::websocket.maxPayloadLength,
+        .idleTimeout = pingos::Configuration::websocket.idleTimeout,
+        .maxBackpressure = pingos::Configuration::websocket.maxBackpressure,
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {

@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     pingos::Loop::ClassInit();
     pingos::Master::ClassInit(pingos::Loop::FetchLoop());
 
-    pingos::WssServer ws;
+    pingos::WssServer ws, wss;
     pingos::RtcMaster master;
     pingos::RtcServer rtc;
 
@@ -42,22 +42,26 @@ int main(int argc, char **argv)
         !pingos::Configuration::websocket.keyFile.empty() &&
         pingos::Configuration::websocket.sslPort)
     {
-        if (ws.Accept(pingos::Configuration::websocket.sslPort,
+        if (wss.Accept(pingos::Configuration::websocket.sslPort,
             pingos::Configuration::websocket.keyFile,
             pingos::Configuration::websocket.certFile,
             pingos::Configuration::websocket.passPhrase) != 0)
         {
             return -1;
         }
+
+        wss.SetListener(&rtc);
     }
 
     if (pingos::Configuration::websocket.port) {
         if (ws.Accept(pingos::Configuration::websocket.port) != 0) {
             return -1;
         }
+
+        ws.SetListener(&rtc);
     }
 
-    rtc.Start(&ws, &master);
+    rtc.SetMaster(&master);
 
     master.Start();
 

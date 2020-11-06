@@ -15,8 +15,6 @@ public:
     HttpServer(Listener *listener = nullptr);
     virtual ~HttpServer();
 
-    void SetListener(Listener *listener);
-
     int OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl);
     void OnDisconnect(void *handle);
 

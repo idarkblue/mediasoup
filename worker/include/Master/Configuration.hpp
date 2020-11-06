@@ -22,6 +22,9 @@ struct WebsocketConfiguration {
     std::string certFile;
     std::string passPhrase;
     std::string location; // uri, e.g. "/pingos"
+    int idleTimeout;
+    int maxBackpressure;
+    int maxPayloadLength;
 };
 
 struct WebRtcConfiguration {

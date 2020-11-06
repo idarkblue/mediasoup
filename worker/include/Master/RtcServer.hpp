@@ -35,7 +35,7 @@ public:
     RtcServer(NetServer *netServer, RtcMaster *rtcMaster);
     virtual ~RtcServer();
 
-    int Start(NetServer *netServer, RtcMaster *rtcMaster);
+    int SetMaster(RtcMaster *rtcMaster);
 
 // Implement RtcSession::Listener
 protected:
@@ -62,7 +62,6 @@ protected:
     void DeleteSession(RtcSession *session);
 
 private:
-    NetServer *m_netServer;
     RtcMaster *m_rtcMaster;
 };
 

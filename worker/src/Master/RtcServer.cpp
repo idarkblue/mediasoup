@@ -16,7 +16,7 @@ namespace pingos {
 
 RtcServer::RtcServer(NetServer *netServer, RtcMaster *rtcMaster)
 {
-    this->Start(netServer, rtcMaster);
+    this->SetMaster(rtcMaster);
 }
 
 RtcServer::~RtcServer()
@@ -24,21 +24,13 @@ RtcServer::~RtcServer()
 
 }
 
-int RtcServer::Start(NetServer *netServer, RtcMaster *rtcMaster)
+int RtcServer::SetMaster(RtcMaster *rtcMaster)
 {
-    if (!netServer) {
-        PMS_ERROR("NetServer ptr is nullptr");
-        return -1;
-    }
-
     if (!rtcMaster) {
         PMS_ERROR("RtcMaster ptr is nullptr");
         return -1;
     }
 
-    netServer->SetListener(this);
-
-    m_netServer = netServer;
     m_rtcMaster = rtcMaster;
 
     return 0;

@@ -89,6 +89,9 @@ int Configuration::Load()
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "certFile", std::string, websocket.certFile, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "passPhrase", std::string, websocket.passPhrase, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "location", std::string, websocket.location, "/");
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "idleTimeout", int, websocket.idleTimeout, 100);
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "maxBackpressure", int, websocket.maxBackpressure, 0);
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "maxPayloadLength", int, websocket.maxPayloadLength, 16000000);
 
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "listenIp", std::string, webrtc.listenIp, "0.0.0.0");
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "announcedIp", std::string, webrtc.announcedIp, "0.0.0.0");
