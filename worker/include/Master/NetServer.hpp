@@ -25,7 +25,7 @@ public:
     int Padding(std::string_view data);
     const char *GetData();
     int GetDataSize();
-    std::string PopData();
+    void PopData(std::string &data);
 
 public:
     virtual int ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen);

@@ -138,7 +138,7 @@ void WssServer::OnDrain(void *c, bool ssl)
 void WssServer::OnMessage(void *c, std::string_view message, uWS::OpCode opCode, bool ssl)
 {
     PMS_DEBUG("WS Connection ptr {}, message {}, opCode {} ...", c, message, (int) opCode);
-    NetConnection *nc = this->FetchConnection(c, ssl);
+    NetConnection *nc = this->FindConnection(c, ssl);
 
     if (nc == nullptr) {
         PMS_ERROR("Fetch nc failed.");

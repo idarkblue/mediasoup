@@ -84,13 +84,12 @@ int NetConnection::GetDataSize()
     return m_receivedData.size();
 }
 
-std::string NetConnection::PopData()
+void NetConnection::PopData(std::string &data)
 {
-    std::string data = m_receivedData;
-
-    m_receivedData.clear();
-
-    return data;
+    if (!m_receivedData.empty()) {
+        data = m_receivedData;
+        m_receivedData.clear();
+    }
 }
 
 bool NetConnection::IsSsl()

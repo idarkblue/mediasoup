@@ -92,7 +92,9 @@ int RtcServer::OnMessage(NetConnection *nc)
     json jsonObject;
 
     try {
-        jsonObject = json::parse(nc->PopData());
+        std::string message { "{}" };
+        nc->PopData(message);
+        jsonObject = json::parse(message);
     } catch (const json::parse_error &error) {
         reason = error.what();
         PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());

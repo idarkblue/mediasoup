@@ -139,8 +139,8 @@ int Worker::Spawn()
         return -1;
     }
 
-    m_channelPipe.CloseCurrntProcessPipe();
-    m_payloadChannelPipe.CloseCurrntProcessPipe();
+//    m_channelPipe.CloseCurrntProcessPipe();
+//    m_payloadChannelPipe.CloseCurrntProcessPipe();
 
     return 0;
 }
