@@ -51,7 +51,7 @@ int WssServer::Accept(uint16_t port)
         .close = [this](auto *ws, int code, std::string_view message) {
             this->OnClose(ws, code, message, false);
         }
-    }).listen(port, [this, port](auto *token) {
+    }).listen("0.0.0.0", port, [this, port](auto *token) {
         m_listenSocket = token;
         if (token) {
             PMS_INFO("WebSocket is listening on port {}", port);
@@ -99,7 +99,7 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
         .close = [this](auto *ws, int code, std::string_view message) {
             this->OnClose(ws, code, message, true);
         }
-    }).listen(port, [this, port](auto *token) {
+    }).listen("0.0.0.0", port, [this, port](auto *token) {
         m_listenSocket = token;
         if (token) {
             PMS_INFO("WebSocket ssl is listening on port {}", port);
