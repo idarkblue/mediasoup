@@ -40,7 +40,6 @@ struct MasterConfiguration {
     int numOfWorkerProcess { 0 }; // number of worker processes
     std::string execPath = { "./" };
     std::string workerName = { "" };
-    std::string unixSocketPath { "/tmp/pingos" };
 };
 
 class Configuration

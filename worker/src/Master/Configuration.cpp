@@ -110,7 +110,6 @@ int Configuration::Load()
             master.execPath += "/";
         }
 
-        JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "unixSocketPath", std::string, master.unixSocketPath, "/tmp/pingos");
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "workerName", std::string, master.workerName, "mediasoup-worker");
 
     } catch (const json::parse_error &error) {

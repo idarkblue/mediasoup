@@ -140,18 +140,12 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
     this->type = "simple";
     this->kind = producer.kind;
     this->paused = producer.paused;
-    std::vector<RTC::RtpHeaderExtensionParameters> headerExtensions;
 
-    headerExtensions = this->rtpParameters.headerExtensions;
-    std::string mid = this->rtpParameters.mid;
-    auto codecs = this->rtpParameters.codecs;
-
-    try {
-        json jsonObject = json::object();
-        producer.rtpParameters.FillJson(jsonObject);
-        this->rtpParameters = RTC::RtpParameters(jsonObject);
-    } catch (const MediaSoupError& error) {
-        return -1;
+    this->rtpParameters.rtcp = producer.rtpParameters.rtcp;
+    this->rtpParameters.hasRtcp = producer.rtpParameters.hasRtcp;
+    this->rtpParameters.encodings = producer.rtpParameters.encodings;
+    for (auto &encoding : this->rtpParameters.encodings) {
+        encoding.hasCodecPayloadType = false;
     }
 
     this->consumableRtpEncodings = producer.rtpParameters.encodings;
@@ -169,52 +163,6 @@ int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
         cp.ssrc = encoding.mappedSsrc;
         i++;
     }
-/*
-    for (auto &codec : this->rtpParameters.codecs) {
-        if (producer.rtpMapping.codecs.count(codec.payloadType) == 0) {
-            continue;
-        }
-
-        codec.payloadType = producer.rtpMapping.codecs[codec.payloadType];
-        if (codec.parameters.HasInteger("apt") &&
-            producer.rtpMapping.codecs.count(codec.parameters.GetInteger("apt")))
-        {
-            json obj = json::object();
-            obj["apt"] = producer.rtpMapping.codecs[codec.parameters.GetInteger("apt")];
-            PMS_INFO("apt {} => {}",
-                codec.parameters.GetInteger("apt"),
-                producer.rtpMapping.codecs[codec.parameters.GetInteger("apt")]);
-            codec.parameters = RTC::Parameters();
-            codec.parameters.Set(obj);
-        }
-
-        for (auto it = codec.rtcpFeedback.begin(); it != codec.rtcpFeedback.end(); it++){
-            // if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::VIDEO &&
-            //     it->type == "goog-remb")
-            // {
-            //     codec.rtcpFeedback.erase(it);
-            //     break;
-            // }
-
-            // if (codec.mimeType.type == RTC::RtpCodecMimeType::Type::AUDIO &&
-            if (it->type == "transport-cc")
-            {
-                codec.rtcpFeedback.erase(it);
-                break;
-            }
-        }
-    }
-    for (auto &encoding : this->rtpParameters.encodings) {
-        if (producer.rtpMapping.codecs.count(encoding.codecPayloadType) == 0) {
-            continue;
-        }
-        encoding.codecPayloadType = producer.rtpMapping.codecs[encoding.codecPayloadType];
-    }
-*/
-
-    this->rtpParameters.headerExtensions = headerExtensions;
-    this->rtpParameters.mid = mid;
-    this->rtpParameters.codecs = codecs;
 
     return 0;
 }
