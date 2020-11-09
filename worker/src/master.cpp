@@ -34,36 +34,76 @@ int main(int argc, char **argv)
     pingos::Loop::ClassInit();
     pingos::Master::ClassInit(pingos::Loop::FetchLoop());
 
-    pingos::WssServer ws, wss;
     pingos::RtcMaster master;
-    pingos::RtcServer rtc;
+
+    if (master.Start() != 0) {
+        printf("Failed to start master\r\n");
+        return 0;
+    }
+
+    pingos::WssServer ws(
+        uWS::CompressOptions::DISABLED,
+        pingos::Configuration::websocket.maxPayloadLength,
+        pingos::Configuration::websocket.idleTimeout,
+        pingos::Configuration::websocket.maxBackpressure
+    );
+
+    if (pingos::Configuration::websocket.port) {
+        if (ws.Accept(pingos::Configuration::websocket.listenIp,
+            pingos::Configuration::websocket.port,
+            pingos::Configuration::websocket.location) != 0)
+        {
+            return -1;
+        }
+    }
 
     if (!pingos::Configuration::websocket.certFile.empty() &&
         !pingos::Configuration::websocket.keyFile.empty() &&
         pingos::Configuration::websocket.sslPort)
     {
-        if (wss.Accept(pingos::Configuration::websocket.sslPort,
+        if (ws.Accept(pingos::Configuration::websocket.listenIp,
+            pingos::Configuration::websocket.sslPort,
+            pingos::Configuration::websocket.location,
             pingos::Configuration::websocket.keyFile,
             pingos::Configuration::websocket.certFile,
             pingos::Configuration::websocket.passPhrase) != 0)
         {
             return -1;
         }
-
-        wss.SetListener(&rtc);
     }
 
-    if (pingos::Configuration::websocket.port) {
-        if (ws.Accept(pingos::Configuration::websocket.port) != 0) {
+    pingos::HttpServer http, https;
+
+    if (pingos::Configuration::http.port) {
+        if (http.Accept(pingos::Configuration::http.listenIp,
+            pingos::Configuration::http.port,
+            pingos::Configuration::http.location) != 0)
+        {
             return -1;
         }
-
-        ws.SetListener(&rtc);
     }
+
+    if (!pingos::Configuration::http.certFile.empty() &&
+        !pingos::Configuration::http.keyFile.empty() &&
+        pingos::Configuration::http.sslPort)
+    {
+        if (https.Accept(pingos::Configuration::http.listenIp,
+            pingos::Configuration::http.sslPort,
+            pingos::Configuration::http.location,
+            pingos::Configuration::http.keyFile,
+            pingos::Configuration::http.certFile,
+            pingos::Configuration::http.passPhrase) != 0)
+        {
+            return -1;
+        }
+    }
+
+    pingos::RtcServer rtc;
 
     rtc.SetMaster(&master);
 
-    master.Start();
+    ws.SetListener(&rtc);
+    http.SetListener(&rtc);
 
     pingos::Loop::Run();
 

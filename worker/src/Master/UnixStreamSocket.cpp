@@ -23,7 +23,7 @@ static uint8_t WriteBuffer[NsMessageMaxLen];
 
 /* Instance methods. */
 UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, Listener* listener, ::UnixStreamSocket::Role role)
-    : ::UnixStreamSocket(handle, NsMessageMaxLen, role), m_listener(listener)
+    : ::UnixStreamSocket(handle, NsMessageMaxLen, role), listener(listener)
 {
     MS_TRACE_STD();
 }
@@ -37,7 +37,7 @@ void UnixStreamSocket::SetListener(Listener* listener)
 {
     MS_TRACE_STD();
 
-    this->m_listener = listener;
+    this->listener = listener;
 }
 
 void UnixStreamSocket::Send(json& jsonMessage)
@@ -204,7 +204,7 @@ void UnixStreamSocket::UserOnUnixStreamRead()
 
         // Notify the listener.
         std::string_view payload {payloadStart, payloadLen};
-        this->m_listener->OnChannelMessage(this, payload);
+        this->listener->OnChannelMessage(this, payload);
 
         // If there is no more space available in the buffer and that is because
         // the latest parsed message filled it, then empty the full buffer.
@@ -236,7 +236,7 @@ void UnixStreamSocket::UserOnUnixStreamSocketClosed()
     MS_TRACE_STD();
 
     // Notify the listener.
-    this->m_listener->OnChannelClosed(this);
+    this->listener->OnChannelClosed(this);
 }
 
 

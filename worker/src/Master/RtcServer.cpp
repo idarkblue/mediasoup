@@ -126,6 +126,8 @@ int RtcServer::OnMessage(NetConnection *nc)
             break;
 
             default:
+            ret = -1;
+            reason = "invalid message";
             break;
         }
 

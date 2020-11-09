@@ -52,7 +52,7 @@ int PipeServer::Listen(std::string pipeName)
 
 void PipeServer::SetListener(Listener *listener)
 {
-    m_listener = listener;
+    this->listener = listener;
 }
 
 /*
@@ -93,8 +93,8 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
 
     auto client = new pingos::UnixStreamSocket(pipe, this, role);
 
-    if (m_listener) {
-        m_listener->OnChannelAccept(this, client);
+    if (this->listener) {
+        this->listener->OnChannelAccept(this, client);
     }
 
     m_clients.push_back(client);
@@ -102,8 +102,8 @@ void PipeServer::OnAccept(uv_stream_t* server, int status)
 
 void PipeServer::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload)
 {
-    if (m_listener) {
-        m_listener->OnChannelRecv(this, channel, payload);
+    if (this->listener) {
+        this->listener->OnChannelRecv(this, channel, payload);
     }
 
 //    PMS_DEBUG("{}", payload);
@@ -111,8 +111,8 @@ void PipeServer::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string
 
 void PipeServer::OnChannelClosed(pingos::UnixStreamSocket* channel)
 {
-    if (m_listener) {
-        m_listener->OnChannelClosed(this, channel);
+    if (this->listener) {
+        this->listener->OnChannelClosed(this, channel);
     }
 
     PMS_ERROR("channel closed");

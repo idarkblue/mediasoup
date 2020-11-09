@@ -40,7 +40,7 @@ private:
 
 private:
     // Passed by argument.
-    Listener *m_listener{ nullptr };
+    Listener *listener{ nullptr };
     // Others.
     size_t m_msgStart{ 0u }; // Where the latest message starts.
 };

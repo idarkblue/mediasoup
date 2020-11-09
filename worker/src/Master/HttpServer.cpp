@@ -6,7 +6,7 @@
 namespace pingos {
 HttpServer::HttpServer(NetServer::Listener *listener)
 {
-    m_listener = listener;
+    this->listener = listener;
 }
 
 HttpServer::~HttpServer()
@@ -14,12 +14,12 @@ HttpServer::~HttpServer()
 
 }
 
-int HttpServer::Accept(uint16_t port)
+int HttpServer::Accept(std::string ip, uint16_t port, std::string location)
 {
     us_socket_context_options_t options;
-    m_port = port;
-    m_app = new uWS::App(options);
-    m_app->post("/*", [this](uWS::HttpResponse<false> *res, uWS::HttpRequest *req) {
+    this->port = port;
+    this->app = new uWS::App(options);
+    this->app->post(location, [this](uWS::HttpResponse<false> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
             this->OnDisconnect(res);
         });
@@ -29,31 +29,28 @@ int HttpServer::Accept(uint16_t port)
                res->end("ServerError");
             }
         });
-    });
-
-    m_app->listen(port, [port](us_listen_socket_t *listenSocket) {
+    }).listen(ip, port, [ip, port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
-            PMS_INFO("Listening on port {}", port);
+            PMS_INFO("Listening http port {}:{} success", ip, port);
         } else {
-            PMS_ERROR("Listening on port {} failed.", port);
+            PMS_ERROR("Listening http port {}:{} failed.", ip, port);
         }
     });
 
     return 0;
 }
 
-int HttpServer::Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase)
+int HttpServer::Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase)
 {
-    m_sslPort = port;
+    this->sslPort = port;
 
-    us_socket_context_options_t opt;
-    opt.key_file_name = keyfile.c_str();
-    opt.cert_file_name = certfile.c_str();
-    opt.passphrase = passphrase.c_str();
+    this->sslApp = new uWS::SSLApp({
+        .key_file_name = keyfile.c_str(),
+        .cert_file_name = certfile.c_str(),
+        .passphrase = passphrase.c_str()
+    });
 
-    m_sslApp = new uWS::SSLApp(opt);
-
-    m_sslApp->post("/*", [this](uWS::HttpResponse<true> *res, uWS::HttpRequest *req) {
+    this->sslApp->post(location, [this](uWS::HttpResponse<true> *res, uWS::HttpRequest *req) {
         res->onAborted([this, res]() {
             this->OnDisconnect(res);
         });
@@ -63,13 +60,11 @@ int HttpServer::Accept(uint16_t port, std::string keyfile, std::string certfile,
                res->end("ServerError");
             }
         });
-    });
-
-    m_sslApp->listen(port, [port](us_listen_socket_t *listenSocket) {
+    }).listen(ip, port, [ip, port](us_listen_socket_t *listenSocket) {
         if (listenSocket) {
-            PMS_ERROR("Listening on port {} success", port);
+            PMS_INFO("Listening https port {}:{} success", ip, port);
         } else {
-            PMS_ERROR("Listening on port {} failed.", port);
+            PMS_ERROR("Listening https port {}:{} failed.", ip, port);
         }
     });
 
@@ -133,8 +128,8 @@ int HttpServer::OnPost(void *handle, uWS::HttpRequest *req, std::string_view chu
     nc->Padding(chunk);
 
     if (isEnd) {
-        if (m_listener) {
-            m_listener->OnMessage(nc);
+        if (this->listener) {
+            this->listener->OnMessage(nc);
         }
     }
 
@@ -143,10 +138,10 @@ int HttpServer::OnPost(void *handle, uWS::HttpRequest *req, std::string_view chu
 
 void HttpServer::OnDisconnect(void *handle)
 {
-    auto it = m_ncMap.find(handle);
-    if (it != m_ncMap.end() && this->m_listener) {
-        m_listener->OnDisconnect(it->second);
-        m_listener = nullptr;
+    auto it = this->ncMap.find(handle);
+    if (it != this->ncMap.end() && this->listener) {
+        this->listener->OnDisconnect(it->second);
+        this->listener = nullptr;
     }
 
     this->RecycleConnection(handle);

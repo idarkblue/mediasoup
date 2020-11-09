@@ -10,9 +10,17 @@ namespace pingos {
 #define UApp(SSL_) uWS::TemplatedApp<SSL_>
 #define UWS(C_, SSL_)  (uWS::WebSocket<SSL_, true>*)(C_)
 
-WssServer::WssServer(NetServer::Listener *listener)
+WssServer::WssServer(uWS::CompressOptions compression,
+            int maxPayloadLength,
+            int idleTimeout,
+            int maxBackpressure,
+            NetServer::Listener *listener)
 {
-    m_listener = listener;
+    this->listener = listener;
+    this->compression = compression;
+    this->maxPayloadLength = maxPayloadLength;
+    this->idleTimeout = idleTimeout;
+    this->maxBackpressure = maxBackpressure;
 }
 
 WssServer::~WssServer()
@@ -20,17 +28,17 @@ WssServer::~WssServer()
 
 }
 
-int WssServer::Accept(uint16_t port)
+int WssServer::Accept(std::string ip, uint16_t port, std::string location)
 {
-    m_port = port;
-    m_app = new uWS::App();
+    this->port = port;
+    this->app = new uWS::App();
 
-    m_app->ws<NetConnection>("/*", {
+    this->app->ws<NetConnection>(location, {
         /* Settings */
-        .compression = uWS::DISABLED,
-        .maxPayloadLength = pingos::Configuration::websocket.maxPayloadLength,
-        .idleTimeout = pingos::Configuration::websocket.idleTimeout,
-        .maxBackpressure = pingos::Configuration::websocket.maxBackpressure,
+        .compression = this->compression,
+        .maxPayloadLength = this->maxPayloadLength,
+        .idleTimeout = this->idleTimeout,
+        .maxBackpressure = this->maxBackpressure,
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {
@@ -51,34 +59,34 @@ int WssServer::Accept(uint16_t port)
         .close = [this](auto *ws, int code, std::string_view message) {
             this->OnClose(ws, code, message, false);
         }
-    }).listen("0.0.0.0", port, [this, port](auto *token) {
-        m_listenSocket = token;
+    }).listen(ip, port, [this, ip, port](auto *token) {
+        this->listenSocket = token;
         if (token) {
-            PMS_INFO("WebSocket is listening on port {}", port);
+            PMS_INFO("Listening ws port {}:{} success", ip, port);
         } else {
-            PMS_ERROR("WebSocket is listening on port {} failed", port);
+            PMS_ERROR("Listening ws port {}:{} failed", ip, port);
         }
     });
 
     return 0;
 }
 
-int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase)
+int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase)
 {
-    m_sslPort = port;
+    this->sslPort = port;
 
-    m_sslApp = new uWS::SSLApp({
+    this->sslApp = new uWS::SSLApp({
         .key_file_name = keyfile.c_str(),
         .cert_file_name = certfile.c_str(),
         .passphrase = passphrase.c_str()
     });
 
-    m_sslApp->ws<NetConnection>("/*", {
+    this->sslApp->ws<NetConnection>("/*", {
         /* Settings */
-        .compression = uWS::DISABLED,
-        .maxPayloadLength = pingos::Configuration::websocket.maxPayloadLength,
-        .idleTimeout = pingos::Configuration::websocket.idleTimeout,
-        .maxBackpressure = pingos::Configuration::websocket.maxBackpressure,
+        .compression = this->compression,
+        .maxPayloadLength = this->maxPayloadLength,
+        .idleTimeout = this->idleTimeout,
+        .maxBackpressure = this->maxBackpressure,
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {
@@ -99,12 +107,12 @@ int WssServer::Accept(uint16_t port, std::string keyfile, std::string certfile, 
         .close = [this](auto *ws, int code, std::string_view message) {
             this->OnClose(ws, code, message, true);
         }
-    }).listen("0.0.0.0", port, [this, port](auto *token) {
-        m_listenSocket = token;
+    }).listen(ip, port, [this, ip, port](auto *token) {
+        this->listenSocket = token;
         if (token) {
-            PMS_INFO("WebSocket ssl is listening on port {}", port);
+            PMS_INFO("Listening wss port {}:{} success", ip, port);
         } else {
-            PMS_ERROR("WebSocket ssl is listening on port {} failed", port);
+            PMS_ERROR("Listening wss port {}:{} failed", ip, port);
         }
     });
 
@@ -147,8 +155,8 @@ void WssServer::OnMessage(void *c, std::string_view message, uWS::OpCode opCode,
 
     nc->Padding(message);
 
-    if (m_listener) {
-        m_listener->OnMessage(nc);
+    if (this->listener) {
+        this->listener->OnMessage(nc);
     }
 }
 
@@ -166,9 +174,9 @@ void WssServer::OnClose(void *c, int code, std::string_view message, bool ssl)
 {
     PMS_INFO("WS Connection ptr {}, closing ...", c);
 
-   auto it = m_ncMap.find(c);
-   if (it != m_ncMap.end() && m_listener) {
-       m_listener->OnDisconnect(it->second);
+   auto it = this->ncMap.find(c);
+   if (it != this->ncMap.end() && this->listener) {
+       this->listener->OnDisconnect(it->second);
    }
 
    this->RemoveConnection(c);
@@ -178,9 +186,9 @@ void WssServer::Close()
 {
     PMS_INFO("Closing WS Server");
 
-    if (m_listenSocket) {
-        us_listen_socket_close(0, m_listenSocket);
-        m_listenSocket = nullptr;
+    if (this->listenSocket) {
+        us_listen_socket_close(0, this->listenSocket);
+        this->listenSocket = nullptr;
     }
 }
 

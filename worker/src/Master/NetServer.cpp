@@ -127,35 +127,35 @@ NetServer::~NetServer()
 
 void NetServer::SetListener(NetServer::Listener *listener)
 {
-    m_listener = listener;
+    this->listener = listener;
 }
 
 int NetServer::AddConnection(void *handler, NetConnection *nc)
 {
-    auto it = m_ncMap.find(handler);
-    if (it != m_ncMap.end()) {
+    auto it = this->ncMap.find(handler);
+    if (it != this->ncMap.end()) {
         return -1;
     }
 
-    m_ncMap[handler] = nc;
+    this->ncMap[handler] = nc;
 
     return 0;
 }
 
 void NetServer::RemoveConnection(void *handler)
 {
-    m_ncMap.erase(handler);
+    this->ncMap.erase(handler);
 }
 
 NetConnection* NetServer::GetConnection()
 {
-    if (m_ncFree.size() == 0) {
+    if (this->ncFree.size() == 0) {
         return new NetConnection();
     }
 
-    NetConnection *msg = m_ncFree.front();
+    NetConnection *msg = this->ncFree.front();
 
-    m_ncFree.pop_front();
+    this->ncFree.pop_front();
 
     return msg;
 
@@ -164,36 +164,36 @@ NetConnection* NetServer::GetConnection()
 void NetServer::PutConnection(NetConnection *msg)
 {
     msg->Clear();
-    m_ncFree.push_back(msg);
+    this->ncFree.push_back(msg);
 }
 
 void NetServer::RecycleConnection(void *handler)
 {
-    auto it = m_ncMap.find(handler);
-    if (it == m_ncMap.end()) {
+    auto it = this->ncMap.find(handler);
+    if (it == this->ncMap.end()) {
         return;
     }
 
     NetConnection *nc = it->second;
 
-    if (nc != nullptr && m_listener) {
-        m_listener->OnDisconnect(nc);
+    if (nc != nullptr && this->listener) {
+        this->listener->OnDisconnect(nc);
     }
 
-    m_ncMap.erase(it);
+    this->ncMap.erase(it);
 
     this->PutConnection(nc);
 }
 
 NetConnection* NetServer::FetchConnection(void *handler, bool ssl)
 {
-    auto it = m_ncMap.find(handler);
-    if (it != m_ncMap.end()) {
+    auto it = this->ncMap.find(handler);
+    if (it != this->ncMap.end()) {
         return it->second;
     }
 
     auto nc = this->GetConnection();
-    m_ncMap[handler] = nc;
+    this->ncMap[handler] = nc;
 
     nc->Reset(ssl, handler, this);
 
@@ -202,8 +202,8 @@ NetConnection* NetServer::FetchConnection(void *handler, bool ssl)
 
 NetConnection* NetServer::FindConnection(void *handler, bool ssl)
 {
-    auto it = m_ncMap.find(handler);
-    if (it == m_ncMap.end()) {
+    auto it = this->ncMap.find(handler);
+    if (it == this->ncMap.end()) {
         return nullptr;
     }
 

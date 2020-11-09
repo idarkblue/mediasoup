@@ -64,8 +64,8 @@ public:
     void SetListener(NetServer::Listener *listener);
 
 public:
-    virtual int Accept(uint16_t port) = 0;
-    virtual int Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase) = 0;
+    virtual int Accept(std::string ip, uint16_t port, std::string location) = 0;
+    virtual int Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase) = 0;
     virtual int Disconnect(NetConnection *nc) = 0;
     virtual int ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t nsPayloadLen) = 0;
     virtual int ReplyString(NetConnection *nc, std::string data) = 0;
@@ -83,9 +83,12 @@ protected:
     NetConnection* FindConnection(void *handler, bool ssl);
 
 protected:
-    std::map<void *, NetConnection *> m_ncMap;
-    std::list<NetConnection*>         m_ncFree;
-    Listener                         *m_listener { nullptr };
+    uint16_t port  { 80 };
+    uint16_t sslPort { 443 };
+
+    std::map<void *, NetConnection *> ncMap;
+    std::list<NetConnection*>         ncFree;
+    Listener                         *listener { nullptr };
 };
 
 }

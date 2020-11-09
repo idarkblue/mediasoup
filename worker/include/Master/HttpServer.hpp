@@ -19,18 +19,15 @@ public:
     void OnDisconnect(void *handle);
 
 public:
-    virtual int Accept(uint16_t port) override;
-    virtual int Accept(uint16_t port, std::string keyfile, std::string certfile, std::string passphrase) override;
+    virtual int Accept(std::string ip, uint16_t port, std::string location) override;
+    virtual int Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase) override;
     virtual int Disconnect(NetConnection *nc) override;
     virtual int ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t nsPayloadLen) override;
     virtual int ReplyString(NetConnection *nc, std::string data) override;
 
 private:
-    int m_port  { 80 };
-    int m_sslPort { 443 };
-
-    uWS::App        *m_app  { nullptr };
-    uWS::SSLApp     *m_sslApp { nullptr };
+    uWS::App        *app  { nullptr };
+    uWS::SSLApp     *sslApp { nullptr };
 };
 
 }

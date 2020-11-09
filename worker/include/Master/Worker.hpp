@@ -45,21 +45,21 @@ public:
     virtual int ReceiveMasterMessage(std::string &payload) = 0;
 
 private:
-    uv_process_options_t m_options;
-    uv_process_t         m_process;
-    Listener            *m_listener {nullptr};
-    UnixStreamSocket    *m_channelIn { nullptr };
-    UnixStreamSocket    *m_channelOut { nullptr };
-    UnixStreamSocket    *m_payloadChannelIn { nullptr };
-    UnixStreamSocket    *m_payloadChannelOut { nullptr };
+    uv_process_options_t options;
+    uv_process_t         process;
+    Listener            *listener {nullptr};
+    UnixStreamSocket    *channelIn { nullptr };
+    UnixStreamSocket    *channelOut { nullptr };
+    UnixStreamSocket    *payloadChannelIn { nullptr };
+    UnixStreamSocket    *payloadChannelOut { nullptr };
 
-    uv_loop_t           *m_loop { nullptr };
-    Pipe                 m_channelPipe;
-    Pipe                 m_payloadChannelPipe;
+    uv_loop_t           *loop { nullptr };
+    Pipe                 channelPipe;
+    Pipe                 payloadChannelPipe;
 
-    char               **m_args { nullptr };
-    int                  m_slot { -1 };
-    std::string          m_file { "" };
+    char               **args { nullptr };
+    int                  slot { -1 };
+    std::string          file { "" };
 
     uv_stdio_container_t childStdio[7];
     char *env[2];

@@ -15,6 +15,7 @@ namespace pingos{
 
 LogConfiguration    Configuration::log;
 WebsocketConfiguration Configuration::websocket;
+HttpConfiguration Configuration::http;
 MasterConfiguration Configuration::master;
 WebRtcConfiguration Configuration::webrtc;
 std::string Configuration::m_path;
@@ -60,6 +61,12 @@ int Configuration::Load()
             return -1;
         }
 
+        auto jsonHttpIt = jsonObject.find("http");
+        if (jsonHttpIt == jsonObject.end()) {
+            printf("Invalid configuration file, Missing http");
+            return -1;
+        }
+
         auto jsonMasterIt = jsonObject.find("master");
         if (jsonMasterIt == jsonObject.end()) {
             printf("Invalid configuration file, Missing master");
@@ -85,6 +92,7 @@ int Configuration::Load()
 
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "port", uint16_t, websocket.port, 0);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "sslPort", uint16_t, websocket.sslPort, 0);
+        JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "listenIp", std::string, websocket.listenIp, "0.0.0.0");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "keyFile", std::string, websocket.keyFile, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "certFile", std::string, websocket.certFile, "");
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "passPhrase", std::string, websocket.passPhrase, "");
@@ -92,6 +100,14 @@ int Configuration::Load()
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "idleTimeout", int, websocket.idleTimeout, 100);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "maxBackpressure", int, websocket.maxBackpressure, 0);
         JSON_READ_VALUE_DEFAULT(*jsonWebsocketIt, "maxPayloadLength", int, websocket.maxPayloadLength, 16000000);
+
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "port", uint16_t, http.port, 0);
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "sslPort", uint16_t, http.sslPort, 0);
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "listenIp", std::string, http.listenIp, "0.0.0.0");
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "keyFile", std::string, http.keyFile, "");
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "certFile", std::string, http.certFile, "");
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "passPhrase", std::string, http.passPhrase, "");
+        JSON_READ_VALUE_DEFAULT(*jsonHttpIt, "location", std::string, http.location, "/");
 
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "listenIp", std::string, webrtc.listenIp, "0.0.0.0");
         JSON_READ_VALUE_DEFAULT(*jsonWebRtcIt, "announcedIp", std::string, webrtc.announcedIp, "0.0.0.0");

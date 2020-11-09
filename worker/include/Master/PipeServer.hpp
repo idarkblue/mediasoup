@@ -48,7 +48,7 @@ private:
     std::string   m_pipeName;
     UvPipe        m_pipeServer;
     uv_loop_t    *m_loop;
-    Listener     *m_listener;
+    Listener     *listener;
     std::vector<UnixStreamSocket *> m_clients;
 };
 }

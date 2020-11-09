@@ -18,6 +18,7 @@ struct LogConfiguration {
 struct WebsocketConfiguration {
     uint16_t    port; // websocket port
     uint16_t    sslPort; // websocket ssl port
+    std::string listenIp;
     std::string keyFile;
     std::string certFile;
     std::string passPhrase;
@@ -25,6 +26,16 @@ struct WebsocketConfiguration {
     int idleTimeout;
     int maxBackpressure;
     int maxPayloadLength;
+};
+
+struct HttpConfiguration {
+    uint16_t    port; // http port
+    uint16_t    sslPort; // https port
+    std::string listenIp;
+    std::string keyFile;
+    std::string certFile;
+    std::string passPhrase;
+    std::string location; // uri, e.g. "/pingos"
 };
 
 struct WebRtcConfiguration {
@@ -54,6 +65,7 @@ public:
 public:
     static LogConfiguration log;
     static WebsocketConfiguration websocket;
+    static HttpConfiguration http;
     static MasterConfiguration master;
     static WebRtcConfiguration webrtc;
 
