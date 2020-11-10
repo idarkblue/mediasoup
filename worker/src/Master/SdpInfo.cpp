@@ -257,6 +257,14 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters, std::vector<
             return -1;
         }
 
+        auto jsonDirectionIt = jsonRtp.find("direction");
+        if (jsonDirectionIt == jsonRtp.end()) {
+            PMS_ERROR("Invalid sdp, missing direction");
+            return -1;
+        }
+
+        consumer.direction = jsonDirectionIt->get<std::string>();
+
         JSON_READ_VALUE_ASSERT(jsonRtp, "mid", std::string, consumer.rtpParameters.mid);
 
         auto jsonExtIt = jsonRtp.find("ext");
@@ -384,6 +392,13 @@ int SdpInfo::ParseProducers(json &jsonSdp, std::vector<ProducerParameters> &prod
             return -1;
         }
 
+        auto jsonDirectionIt = jsonRtp.find("direction");
+        if (jsonDirectionIt == jsonRtp.end()) {
+            PMS_ERROR("Invalid sdp, missing direction");
+            return -1;
+        }
+
+        producer.direction = jsonDirectionIt->get<std::string>();
         producer.kind = jsonTypeIt->get<std::string>();
         producer.paused = false;
 

@@ -940,7 +940,11 @@ int RtcSession::FillOffer(std::string &sdp)
         }
 
         // sdp: media: direction
-        jsonMedia["direction"] = "sendonly";
+        if (consumer.direction.find("send") != std::string::npos) {
+            jsonMedia["direction"] = "sendrecv";
+        } else {
+            jsonMedia["direction"] = "sendonly";
+        }
         // sdp: media: mid
         jsonMedia["mid"] = consumer.rtpParameters.mid;
         // sdp: media: port (ignore)
@@ -1138,75 +1142,82 @@ int RtcSession::FillAnswer(std::string &sdp)
         }
 
         // sdp: media: ssrcs
-        json jsonSsrcs = json::array();
-        json jsonGroups = json::array();
-        std::string ssrcGroup = "";
-        for (auto encoding : producer.rtpParameters.encodings) {
-            json jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "cname";
-            jsonSsrc["id"] = encoding.ssrc;
-            jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
-            jsonSsrcs.push_back(jsonSsrc);
+        if (producer.direction.find("recv") != std::string::npos) {
 
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "msid";
-            jsonSsrc["id"] = encoding.ssrc;
-            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
-            jsonSsrcs.push_back(jsonSsrc);
+            json jsonSsrcs = json::array();
+            json jsonGroups = json::array();
+            std::string ssrcGroup = "";
+            for (auto encoding : producer.rtpParameters.encodings) {
+                json jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "cname";
+                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
+                jsonSsrcs.push_back(jsonSsrc);
 
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "mslabel";
-            jsonSsrc["id"] = encoding.ssrc;
-            jsonSsrc["value"] = OfferMslabel;
-            jsonSsrcs.push_back(jsonSsrc);
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "msid";
+                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
+                jsonSsrcs.push_back(jsonSsrc);
 
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "label";
-            jsonSsrc["id"] = encoding.ssrc;
-            jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
-            jsonSsrcs.push_back(jsonSsrc);
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "mslabel";
+                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["value"] = OfferMslabel;
+                jsonSsrcs.push_back(jsonSsrc);
 
-            if (!encoding.hasRtx) {
-                continue;
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "label";
+                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
+                jsonSsrcs.push_back(jsonSsrc);
+
+                if (!encoding.hasRtx) {
+                    continue;
+                }
+
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "cname";
+                jsonSsrc["id"] = encoding.rtx.ssrc;
+                jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
+                jsonSsrcs.push_back(jsonSsrc);
+
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "msid";
+                jsonSsrc["id"] = encoding.rtx.ssrc;
+                jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
+                jsonSsrcs.push_back(jsonSsrc);
+
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "mslabel";
+                jsonSsrc["id"] = encoding.rtx.ssrc;
+                jsonSsrc["value"] = OfferMslabel;
+                jsonSsrcs.push_back(jsonSsrc);
+
+                jsonSsrc = json::object();
+                jsonSsrc["attribute"] = "label";
+                jsonSsrc["id"] = encoding.rtx.ssrc;
+                jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
+                jsonSsrcs.push_back(jsonSsrc);
+
+                json jsonGroup;
+                jsonGroup["semantics"] = "FID";
+                jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
+                jsonGroups.push_back(jsonGroup);
             }
 
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "cname";
-            jsonSsrc["id"] = encoding.rtx.ssrc;
-            jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
-            jsonSsrcs.push_back(jsonSsrc);
+            jsonMedia["ssrcs"] = jsonSsrcs;
+            if (jsonGroups.size() > 0) {
+                jsonMedia["ssrcGroups"] = jsonGroups;
+            }
+            // sdp: media: direction
+            jsonMedia["direction"] = "sendrecv";
 
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "msid";
-            jsonSsrc["id"] = encoding.rtx.ssrc;
-            jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
-            jsonSsrcs.push_back(jsonSsrc);
-
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "mslabel";
-            jsonSsrc["id"] = encoding.rtx.ssrc;
-            jsonSsrc["value"] = OfferMslabel;
-            jsonSsrcs.push_back(jsonSsrc);
-
-            jsonSsrc = json::object();
-            jsonSsrc["attribute"] = "label";
-            jsonSsrc["id"] = encoding.rtx.ssrc;
-            jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
-            jsonSsrcs.push_back(jsonSsrc);
-
-            json jsonGroup;
-            jsonGroup["semantics"] = "FID";
-            jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
-            jsonGroups.push_back(jsonGroup);
+        } else {
+            // sdp: media: direction
+            jsonMedia["direction"] = "recvonly";
         }
 
-        jsonMedia["ssrcs"] = jsonSsrcs;
-        if (jsonGroups.size() > 0) {
-            jsonMedia["ssrcGroups"] = jsonGroups;
-        }
-
-        // sdp: media: direction
-        jsonMedia["direction"] = "sendrecv";
         // sdp: media: mid
         jsonMedia["mid"] = producer.rtpParameters.mid;
         // sdp: media: port (ignore)

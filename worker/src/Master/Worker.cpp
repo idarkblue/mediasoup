@@ -122,6 +122,7 @@ int Worker::Spawn()
 
     this->options.env = env;
     this->options.flags = 0;
+    this->options.cwd = nullptr;
 
     this->process.data = this;
 

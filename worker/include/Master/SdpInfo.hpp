@@ -77,6 +77,7 @@ struct ProducerParameters {
     RTC::RtpParameters rtpParameters;
     std::string kind { "" };
     bool paused { false };
+    std::string direction { "" };
 
     void FillJson(json &jsonObject);
 };
@@ -87,6 +88,7 @@ struct ConsumerParameters {
     std::string kind { "" };
     std::string type { "simple" };
     bool paused { false };
+    std::string direction { "" };
 
     int SetRtpParameters(ProducerParameters &producer);
 

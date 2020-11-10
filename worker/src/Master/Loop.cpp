@@ -5,14 +5,16 @@
 
 namespace pingos {
 
+uv_loop_t *Loop::loop = nullptr;
+
 void Loop::ClassInit()
 {
-    DepLibUV::ClassInit();
+//    
 }
 
 uv_loop_t* Loop::FetchLoop()
 {
-    auto loop = DepLibUV::GetLoop();
+    loop = uv_loop_new();
     if (loop == nullptr || uWS::Loop::get(loop) == nullptr) {
         PMS_ERROR("Creating uWS loop failed.");
         return nullptr;

@@ -31,7 +31,6 @@ int main(int argc, char **argv)
     }
 
     pingos::Log::ClassInit(pingos::Configuration::log.file, pingos::Configuration::log.fileLevel, pingos::Configuration::log.fileLevel);
-    pingos::Loop::ClassInit();
     pingos::Master::ClassInit(pingos::Loop::FetchLoop());
 
     pingos::RtcMaster master;
