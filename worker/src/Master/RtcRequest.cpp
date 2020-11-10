@@ -9,6 +9,7 @@
 namespace pingos {
 std::unordered_map<std::string, RtcRequest::MethodId> RtcRequest::string2MethodId =
     {
+        { "session.setup", RtcRequest::MethodId::SESSION_SETUP },
         { "stream.publish",    RtcRequest::MethodId::STREAM_PUBLISH },
         { "stream.play",    RtcRequest::MethodId::STREAM_PLAY },
         { "stream.mute",    RtcRequest::MethodId::STREAM_MUTE },
@@ -35,10 +36,8 @@ void RtcRequest::Parse(json &jsonObject)
 {
 //    JSON_READ_VALUE_THROW(jsonObject, "id", uint64_t, this->id);
     JSON_READ_VALUE_DEFAULT(jsonObject, "method", std::string, this->method, "unknown");
+    JSON_READ_VALUE_DEFAULT(jsonObject, "session", std::string, this->session, "");
     JSON_READ_VALUE_DEFAULT(jsonObject, "stream", std::string, this->stream, "unknown");
-
-    JSON_READ_VALUE_DEFAULT(jsonObject, "app", std::string, this->app, "pingos");
-    JSON_READ_VALUE_DEFAULT(jsonObject, "uid", std::string, this->uid, "pingo");
 
     if (string2MethodId.find(this->method) == string2MethodId.end()) {
         PMS_ERROR("Unknown method[{}]", this->method);
@@ -62,6 +61,8 @@ int RtcRequest::Accept()
     jsonResponse["version"] = "1.0";
     jsonResponse["err"] = 0;
     jsonResponse["err_msg"] = "OK";
+    jsonResponse["session"] = this->session;
+    jsonResponse["stream"] = this->stream;
     jsonResponse["method"] = this->method;
     jsonResponse["data"] = json::object();
 
@@ -84,6 +85,8 @@ int RtcRequest::Accept(json &jsonData)
     jsonResponse["version"] = "1.0";
     jsonResponse["err"] = 0;
     jsonResponse["err_msg"] = "OK";
+    jsonResponse["session"] = this->session;
+    jsonResponse["stream"] = this->stream;
     jsonResponse["method"] = this->method;
     jsonResponse["data"] = jsonData;
 
@@ -105,6 +108,8 @@ int RtcRequest::Error(const char* reason)
 
     jsonResponse["version"] = "1.0";
     jsonResponse["err"] = -1;
+    jsonResponse["session"] = this->session;
+    jsonResponse["stream"] = this->stream;
     jsonResponse["method"] = this->method;
 
     if (reason) {
@@ -124,11 +129,10 @@ int RtcRequest::Error(const char* reason)
     return 0;
 }
 
-RtcResponse::RtcResponse(NetConnection *nc, std::string app, std::string uid, std::string streamId, std::string method)
+RtcResponse::RtcResponse(NetConnection *nc, std::string sessionId, std::string streamId, std::string method)
 {
     this->nc = nc;
-    this->app = app;
-    this->uid = uid;
+    this->session = sessionId;
     this->stream = streamId;
     this->method = method;
 }
@@ -144,6 +148,7 @@ int RtcResponse::Reply(int error, const char* reason, json &jsonData)
 
     jsonResponse["version"] = "1.0";
     jsonResponse["method"] = this->method;
+    jsonResponse["session"] = this->session;
     jsonResponse["stream"] = this->stream;
     jsonResponse["err"] = error;
 

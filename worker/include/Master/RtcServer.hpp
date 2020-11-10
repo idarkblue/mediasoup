@@ -48,6 +48,7 @@ public:
     virtual void OnDisconnect(NetConnection *connection) override;
 
 protected:
+    int SetupSession(RtcRequest *request);
     int PublishStream(RtcRequest *request);
     int PlayStream(RtcRequest *request);
     int MuteStream(RtcRequest *request);
@@ -58,7 +59,9 @@ protected:
     RtcWorker* FindWorkerByStreamId(std::string streamId);
     Context* GetContext(NetConnection *nc);
     std::string SpellSessionId();
-    RtcSession* CreateRtcSession(RtcRequest *request);
+    RtcSession* CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach);
+    RtcSession* FindRtcSession(std::string streamId, std::string sessionId);
+    RtcSession* FindRtcSession(RtcRequest *request);
     void DeleteSession(RtcSession *session);
 
 private:

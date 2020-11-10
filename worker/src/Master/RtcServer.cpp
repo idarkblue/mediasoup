@@ -52,20 +52,18 @@ void RtcServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
 
     Context *ctx = (Context*) rtcSession->GetContext();
 
+    if (ctx->state == Context::State::READY) {
+        return;
+    }
+
     std::string method = "";
     if (ack == "publish") {
-        if (ctx->state == Context::State::READY) {
-            return;
-        }
         method = "stream.publish";
     } else if (ack == "play") {
-        if (ctx->state == Context::State::READY) {
-            return;
-        }
         method = "stream.play";
     }
 
-    RtcResponse response(ctx->nc, ctx->appId, ctx->uid, ctx->streamId, method);
+    RtcResponse response(ctx->nc, rtcSession->GetSessionId(), ctx->streamId, method);
 
     if (response.Reply(error, reason.c_str(), jsonObject["data"]) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Ack[{}], reply failed.",
@@ -105,6 +103,10 @@ int RtcServer::OnMessage(NetConnection *nc)
         request.Parse(jsonObject);
         int ret = 0;
         switch (request.methodId) {
+            case RtcRequest::MethodId::SESSION_SETUP:
+            ret = this->SetupSession(&request);
+            break;
+
             case RtcRequest::MethodId::STREAM_PUBLISH:
             ret = this->PublishStream(&request);
             break;
@@ -167,18 +169,39 @@ void RtcServer::OnDisconnect(NetConnection *nc)
     return;
 }
 
-std::string& replace_all_distinct(std::string& str, const std::string& old_value, const std::string& new_value)
+int RtcServer::SetupSession(RtcRequest *request)
 {
-    std::string::size_type pos=0;
-    while((pos=str.find(old_value,pos))!= std::string::npos)
-    {
-        str=str.replace(pos,old_value.length(), new_value);
-        if(new_value.length()>0)
-        {
-            pos += new_value.length();
-        }
+    auto jsonRoleIt = request->jsonData.find("role");
+    if (jsonRoleIt == request->jsonData.end()) {
+        MS_THROW_ERROR("Missing role");
+        return -1;
     }
-    return str;
+
+    std::string role = jsonRoleIt->get<std::string>();
+
+    RtcSession *rtcSession = nullptr;
+
+    RtcSession::Role enRole = RtcSession::Role::NONE;
+    if (role == std::string("player")) {
+        enRole = RtcSession::Role::PLAYER;
+    } else if (role == std::string("publisher")) {
+        enRole = RtcSession::Role::PUBLISHER;
+    } else if (role == std::string("monitor")) {
+        enRole = RtcSession::Role::MONITOR;
+    } else {
+        MS_THROW_ERROR("Unknown role %s", role.c_str());
+        return -1;
+    }
+
+    rtcSession = CreateSession(request->nc, request->stream, enRole, false);
+    if (rtcSession == nullptr) {
+        MS_THROW_ERROR("StreamId[%s] create session failed", request->stream.c_str());
+        return -1;
+    }
+
+    PMS_INFO("SessionId[{}] StreamId[{}] Setup Session success", rtcSession->GetSessionId(), request->stream);
+
+    return 0;
 }
 
 int RtcServer::PublishStream(RtcRequest *request)
@@ -192,16 +215,23 @@ int RtcServer::PublishStream(RtcRequest *request)
 
     auto sdp = jsonSdpIt->get<std::string>();
 
-    std::string errorStr = "\\=";
-    std::string rightStr = "=";
-
-    sdp = replace_all_distinct(sdp, errorStr, rightStr);
-
     RtcSession *rtcSession = nullptr;
-    rtcSession = CreateRtcSession(request);
+    if (request->session.empty()) {
+        rtcSession = this->CreateSession(request->nc, request->stream, RtcSession::Role::PUBLISHER, true);
+    } else {
+        rtcSession = FindRtcSession(request);
+    }
+
     if (!rtcSession) {
         PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
         MS_THROW_ERROR("Create rtc session failed");
+        return -1;
+    }
+
+    if (rtcSession->GetRole() != RtcSession::Role::PUBLISHER) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] role[{}] publish not allowed",
+            rtcSession->GetSessionId(), request->stream, rtcSession->GetRole());
+        MS_THROW_ERROR("publish not allowed");
         return -1;
     }
 
@@ -254,10 +284,23 @@ int RtcServer::PlayStream(RtcRequest *request)
     auto sdp = jsonSdpIt->get<std::string>();
 
     RtcSession *rtcSession = nullptr;
-    rtcSession = CreateRtcSession(request);
+
+    if (request->session.empty()) {
+        rtcSession = CreateSession(request->nc, request->stream, RtcSession::Role::PLAYER, true);
+    } else {
+        rtcSession = FindRtcSession(request);
+    }
+
     if (!rtcSession) {
         PMS_ERROR("StreamId[{}] create rtc session failed", request->stream);
         MS_THROW_ERROR("Create rtc session failed");
+        return -1;
+    }
+
+    if (rtcSession->GetRole() != RtcSession::Role::PLAYER) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] role[{}] play not allowed",
+            rtcSession->GetSessionId(), request->stream, rtcSession->GetRole());
+        MS_THROW_ERROR("play not allowed");
         return -1;
     }
 
@@ -282,7 +325,22 @@ int RtcServer::PlayStream(RtcRequest *request)
 
 int RtcServer::MuteStream(RtcRequest *request)
 {
-    auto *rtcSession = (RtcSession*) request->nc->GetSession();
+    auto *rtcSession = this->FindRtcSession(request);
+
+    if (!rtcSession) {
+        MS_THROW_ERROR("Session not found.");
+
+        return -1;
+    }
+
+    if (rtcSession->GetRole() != RtcSession::Role::PUBLISHER &&
+        rtcSession->GetRole() != RtcSession::Role::PLAYER)
+    {
+        PMS_ERROR("SessionId[{}] StreamId[{}] role[{}] mute not allowed",
+            rtcSession->GetSessionId(), request->stream, rtcSession->GetRole());
+        MS_THROW_ERROR("mute not allowed");
+        return -1;
+    }
 
     bool muteVideo { false };
     bool muteAudio { false };
@@ -304,14 +362,28 @@ int RtcServer::MuteStream(RtcRequest *request)
 
     PMS_INFO("SessionId[{}] StreamId[{}] Set mute video[{}] audio[{}]",
         rtcSession->GetSessionId(), request->stream, muteVideo, muteAudio);
+
     return 0;
 }
 
 int RtcServer::CloseStream(RtcRequest *request)
 {
-    auto *rtcSession = (RtcSession*) request->nc->GetSession();
+    auto *rtcSession = this->FindRtcSession(request);
+
+    if (!rtcSession) {
+        MS_THROW_ERROR("Session not found.");
+
+        return -1;
+    }
+
+    if (!rtcSession) {
+        PMS_INFO("SessionId[{}] StreamId[{}] session not found",
+            request->session, request->stream);
+        return -1;
+    }
 
     rtcSession->Close();
+
     PMS_INFO("SessionId[{}] StreamId[{}] Closing",
         rtcSession->GetSessionId(), request->stream);
 
@@ -346,30 +418,13 @@ std::string RtcServer::SpellSessionId()
     return sessionId;
 }
 
-RtcSession* RtcServer::CreateRtcSession(RtcRequest *request)
+RtcSession* RtcServer::CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach)
 {
-    auto streamId = request->stream;
-
     auto worker = this->FindWorkerByStreamId(streamId);
     if (!worker) {
         PMS_ERROR("StreamId[{}], Worker not found", streamId);
 
-//        MS_THROW_ERROR("Worker not found");
-
-        return nullptr;
-    }
-
-    RtcSession::Role role = RtcSession::Role::NONE;
-
-    if (request->methodId == RtcRequest::MethodId::STREAM_PUBLISH) {
-        role = RtcSession::Role::PUBLISHER;
-    } else if (request->methodId == RtcRequest::MethodId::STREAM_PLAY) {
-        role = RtcSession::Role::PLAYER;
-    } else {
-        PMS_ERROR("StreamId[{}], a session can only be created on publish or play",
-            streamId);
-
-//        MS_THROW_ERROR("A session can only be created on publish or play");
+        MS_THROW_ERROR("Worker not found");
 
         return nullptr;
     }
@@ -385,19 +440,34 @@ RtcSession* RtcServer::CreateRtcSession(RtcRequest *request)
     rtcSession->AddLocalAddress(Configuration::webrtc.listenIp, Configuration::webrtc.announcedIp);
 
     Context *ctx = new Context();
-    ctx->nc       = request->nc;
-    ctx->appId    = request->app;
-    ctx->uid      = request->uid;
-    ctx->streamId = request->stream;
+    ctx->nc       = nc;
+    ctx->streamId = streamId;
 
     rtcSession->AddListener(this);
     rtcSession->SetContext(ctx);
-    request->nc->SetSession(rtcSession);
+    if (attach) {
+        nc->SetSession(rtcSession);
+    }
 
     PMS_INFO("SessionId[{}] StreamId[{}], RTC Session creation success, session ptr[{}].",
             sessionId, streamId, (void *)rtcSession);
 
     return rtcSession;
+}
+
+RtcSession * RtcServer::FindRtcSession(RtcRequest *request)
+{
+    if (request->nc && request->nc->GetSession()) {
+        return (RtcSession*) request->nc->GetSession();
+    }
+
+    auto worker = this->FindWorkerByStreamId(request->stream);
+    if (!worker) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] Failed to find worker", request->session, request->stream);
+        return nullptr;
+    }
+
+    return worker->FindRtcSession(request->stream, request->session);
 }
 
 void RtcServer::DeleteSession(RtcSession *session)

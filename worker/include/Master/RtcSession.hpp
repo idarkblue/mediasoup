@@ -83,7 +83,8 @@ public:
     enum Role {
         NONE,
         PUBLISHER,
-        PLAYER
+        PLAYER,
+        MONITOR
     };
     static std::string Role2String(Role role);
 

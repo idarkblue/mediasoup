@@ -97,32 +97,14 @@ std::string RtcSession::Role2String(RtcSession::Role role)
 RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
     m_role(role), m_sessionId(sessionId), m_streamId(stream)
 {
+    static uint64_t guid = 0;
     m_routerId = "pingos";
     m_transportId = sessionId + std::string("-")
         + Role2String(role) + std::string("-")
-        + stream;
+        + stream + std::string("-") + std::to_string(guid);
 
-    if (role == Role::PUBLISHER) {
-        m_videoProducerId = sessionId + std::string("-")
-            + Role2String(role) + std::string("-")
-            + stream + std::string("-")
-            + std::string("video");
-
-        m_audioProducerId = sessionId + std::string("-")
-            + Role2String(role) + std::string("-")
-            + stream + std::string("-")
-            + std::string("audio");
-    } else {
-        m_videoConsumerId = sessionId + std::string("-")
-            + Role2String(role) + std::string("-")
-            + stream + std::string("-")
-            + std::string("video");
-
-        m_audioConsumerId = sessionId + std::string("-")
-            + Role2String(role) + std::string("-")
-            + stream + std::string("-")
-            + std::string("audio");
-    }
+    m_videoProducerId = m_transportId + std::string("-") + std::string("video");
+    m_audioProducerId = m_transportId + std::string("-") + std::string("audio");
 }
 
 RtcSession::~RtcSession()
@@ -487,7 +469,12 @@ int RtcSession::Close()
         return 0;
     }
 
+    if (m_role != Role::PUBLISHER && m_role != Role::PLAYER) {
+        return 0;
+    }
+
     Request request;
+
     if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
             m_sessionId, m_streamId);
