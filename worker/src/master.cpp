@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     }
 
     pingos::WssServer ws(
-        uWS::CompressOptions::DISABLED,
+        uWS::CompressOptions::SHARED_COMPRESSOR,
         pingos::Configuration::websocket.maxPayloadLength,
         pingos::Configuration::websocket.idleTimeout,
         pingos::Configuration::websocket.maxBackpressure

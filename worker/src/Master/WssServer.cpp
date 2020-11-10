@@ -28,12 +28,16 @@ WssServer::~WssServer()
 
 }
 
+struct PerSocketData {
+    NetConnection *nc;
+};
+
 int WssServer::Accept(std::string ip, uint16_t port, std::string location)
 {
     this->port = port;
     this->app = new uWS::App();
 
-    this->app->ws<NetConnection>(location, {
+    this->app->ws<PerSocketData>(location, {
         /* Settings */
         .compression = this->compression,
         .maxPayloadLength = this->maxPayloadLength,
@@ -42,22 +46,35 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location)
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {
-            this->OnOpen(ws, nullptr, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            psd->nc = new NetConnection();
+            auto nc = psd->nc;
+            nc->Reset(false, ws, this);
         },
         .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
-            this->OnMessage(ws, message, opCode, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnMessage(nc, message, opCode);
         },
         .drain = [this](auto *ws) {
-            this->OnDrain(ws, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnDrain(nc);
         },
         .ping = [this](auto *ws) {
-            this->OnPing(ws, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnPing(nc);
         },
         .pong = [this](auto *ws) {
-            this->OnPong(ws, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnPong(nc);
         },
         .close = [this](auto *ws, int code, std::string_view message) {
-            this->OnClose(ws, code, message, false);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnClose(nc, code, message);
         }
     }).listen(ip, port, [this, ip, port](auto *token) {
         this->listenSocket = token;
@@ -78,10 +95,13 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::
     this->sslApp = new uWS::SSLApp({
         .key_file_name = keyfile.c_str(),
         .cert_file_name = certfile.c_str(),
-        .passphrase = passphrase.c_str()
+        .passphrase = passphrase.c_str(),
+        .dh_params_file_name = nullptr,
+        .ca_file_name = nullptr,
+        .ssl_prefer_low_memory_usage = 0
     });
 
-    this->sslApp->ws<NetConnection>(location, {
+    this->sslApp->ws<PerSocketData>(location, {
         /* Settings */
         .compression = this->compression,
         .maxPayloadLength = this->maxPayloadLength,
@@ -90,22 +110,35 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::
         /* Handlers */
         .upgrade = nullptr,
         .open = [this](auto *ws) {
-            this->OnOpen(ws, nullptr, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            psd->nc = new NetConnection();
+            auto nc = psd->nc;
+            nc->Reset(true, ws, this);
         },
         .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
-            this->OnMessage(ws, message, opCode, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnMessage(nc, message, opCode);
         },
         .drain = [this](auto *ws) {
-            this->OnDrain(ws, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnDrain(nc);
         },
         .ping = [this](auto *ws) {
-            this->OnPing(ws, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnPing(nc);
         },
         .pong = [this](auto *ws) {
-            this->OnPong(ws, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnPong(nc);
         },
         .close = [this](auto *ws, int code, std::string_view message) {
-            this->OnClose(ws, code, message, true);
+            auto psd = (PerSocketData *) ws->getUserData();
+            auto nc = psd->nc;
+            this->OnClose(nc, code, message);
         }
     }).listen(ip, port, [this, ip, port](auto *token) {
         this->listenSocket = token;
@@ -119,34 +152,14 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::
     return 0;
 }
 
-void WssServer::OnOpen(void *c, uWS::HttpRequest *req, bool ssl)
-{
-    NetConnection *nc;
-
-    PMS_INFO("WS connection ptr {}, ssl {}", c, ssl);
-
-    if (ssl) {
-        uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)c;
-        nc = (NetConnection *) ws->getUserData();
-    } else {
-        uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)c;
-        nc = (NetConnection *) ws->getUserData();
-    }
-
-    nc->Reset(ssl, c, this);
-
-    this->AddConnection(c, nc);
-}
-
-void WssServer::OnDrain(void *c, bool ssl)
+void WssServer::OnDrain(NetConnection *nc)
 {
 
 }
 
-void WssServer::OnMessage(void *c, std::string_view message, uWS::OpCode opCode, bool ssl)
+void WssServer::OnMessage(NetConnection *nc, std::string_view message, uWS::OpCode opCode)
 {
-    PMS_DEBUG("WS Connection ptr {}, message {}, opCode {} ...", c, message, (int) opCode);
-    NetConnection *nc = this->FindConnection(c, ssl);
+    PMS_DEBUG("WS Connection ptr {}, message {}, opCode {} ...", (void*)nc, message, (int) opCode);
 
     if (nc == nullptr) {
         PMS_ERROR("Fetch nc failed.");
@@ -160,26 +173,25 @@ void WssServer::OnMessage(void *c, std::string_view message, uWS::OpCode opCode,
     }
 }
 
-void WssServer::OnPing(void *c, bool ssl)
+void WssServer::OnPing(NetConnection *nc)
 {
-    PMS_DEBUG("WS Connection ptr {}, ping ...", c);
+    PMS_DEBUG("WS Connection ptr {}, ping ...", (void*)nc);
 }
 
-void WssServer::OnPong(void *c, bool ssl)
+void WssServer::OnPong(NetConnection *nc)
 {
-    PMS_DEBUG("WS Connection ptr {}, pong ...", c);
+    PMS_DEBUG("WS Connection ptr {}, pong ...", (void*)nc);
 }
 
-void WssServer::OnClose(void *c, int code, std::string_view message, bool ssl)
+void WssServer::OnClose(NetConnection *nc, int code, std::string_view message)
 {
-    PMS_INFO("WS Connection ptr {}, closing ...", c);
+    PMS_INFO("WS Connection ptr {}, closing ...", (void*)nc);
 
-   auto it = this->ncMap.find(c);
-   if (it != this->ncMap.end() && this->listener) {
-       this->listener->OnDisconnect(it->second);
-   }
+    if (this->listener) {
+        this->listener->OnDisconnect(nc);
+    }
 
-   this->RemoveConnection(c);
+    delete nc;
 }
 
 void WssServer::Close()
@@ -194,7 +206,7 @@ void WssServer::Close()
 
 int WssServer::Disconnect(NetConnection *nc)
 {
-    PMS_INFO("Disconnectting WS Connection ptr {}", nc->GetConnectionHandler());
+    PMS_INFO("Disconnectting WS Connection ptr {}", (void*)nc);
 
     if (nc->IsSsl()) {
         uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)nc->GetConnectionHandler();
@@ -219,7 +231,7 @@ int WssServer::ReplyBinary(NetConnection *nc, const uint8_t *nsPayload, size_t n
         std::string content((const char *)nsPayload, nsPayloadLen);
         ws->send(content, uWS::OpCode::BINARY);
     } else {
-        uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)nc->GetConnectionHandler();
+        uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)nc->GetConnectionHandler();
 
         std::string content((const char *)nsPayload, nsPayloadLen);
         ws->send(content, uWS::OpCode::BINARY);

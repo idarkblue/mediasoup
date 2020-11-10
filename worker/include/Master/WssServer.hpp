@@ -19,12 +19,11 @@ public:
     virtual ~WssServer();
 
 protected:
-    void OnOpen(void *c, uWS::HttpRequest *req, bool ssl);
-    void OnDrain(void *c, bool ssl);
-    void OnMessage(void *c, std::string_view message, uWS::OpCode opCode, bool ssl);
-    void OnPing(void *c, bool ssl);
-    void OnPong(void *c, bool ssl);
-    void OnClose(void *c, int code, std::string_view message, bool ssl);
+    void OnDrain(NetConnection *nc);
+    void OnMessage(NetConnection *nc, std::string_view message, uWS::OpCode opCode);
+    void OnPing(NetConnection *nc);
+    void OnPong(NetConnection *nc);
+    void OnClose(NetConnection *nc, int code, std::string_view message);
 
 private:
     void Close();
