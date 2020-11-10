@@ -103,8 +103,13 @@ RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
         + Role2String(role) + std::string("-")
         + stream + std::string("-") + std::to_string(guid);
 
-    m_videoProducerId = m_transportId + std::string("-") + std::string("video");
-    m_audioProducerId = m_transportId + std::string("-") + std::string("audio");
+    if (role == Role::PUBLISHER) {
+        m_videoProducerId = m_transportId + std::string("-") + std::string("video");
+        m_audioProducerId = m_transportId + std::string("-") + std::string("audio");
+    } else {
+        m_videoConsumerId = m_transportId + std::string("-") + std::string("video");
+        m_audioConsumerId = m_transportId + std::string("-") + std::string("audio");
+    }
 }
 
 RtcSession::~RtcSession()
