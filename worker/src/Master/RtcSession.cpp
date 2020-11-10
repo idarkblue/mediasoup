@@ -353,13 +353,13 @@ int RtcSession::Play(std::string sdp)
         }
     }
 
-    for (auto it = m_consumerParameters.begin(); it != m_consumerParameters.end();) {
-        if (it->rtpParameters.encodings.size() == 0) {
-            m_consumerParameters.erase(it);
-        } else {
-            it++;
-        }
-    }
+    // for (auto it = m_consumerParameters.begin(); it != m_consumerParameters.end();) {
+    //     if (it->rtpParameters.encodings.size() == 0) {
+    //         m_consumerParameters.erase(it);
+    //     } else {
+    //         it++;
+    //     }
+    // }
 
     Request request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
@@ -876,6 +876,10 @@ int RtcSession::FillOffer(std::string &sdp)
         json jsonGroups = json::array();
         std::string ssrcGroup = "";
         for (auto encoding : consumer.rtpParameters.encodings) {
+            if (encoding.ssrc == 0) {
+                continue;
+            }
+
             json jsonSsrc = json::object();
             jsonSsrc["attribute"] = "cname";
             jsonSsrc["id"] = encoding.ssrc;
@@ -1148,6 +1152,10 @@ int RtcSession::FillAnswer(std::string &sdp)
             json jsonGroups = json::array();
             std::string ssrcGroup = "";
             for (auto encoding : producer.rtpParameters.encodings) {
+                if (encoding.ssrc == 0) {
+                    continue;
+                }
+
                 json jsonSsrc = json::object();
                 jsonSsrc["attribute"] = "cname";
                 jsonSsrc["id"] = encoding.ssrc;
