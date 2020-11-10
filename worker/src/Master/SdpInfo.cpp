@@ -408,6 +408,11 @@ int SdpInfo::ParseProducers(json &jsonSdp, std::vector<ProducerParameters> &prod
             return -1;
         }
 
+        if (producer.rtpParameters.encodings.size() == 0) {
+            PMS_INFO("Kind {} no encodings information", producer.kind);
+            continue;
+        }
+
         if (ParseRtpMapping(producer) != 0) {
             PMS_ERROR("Invalid sdp, parse rtp mapping failed");
 

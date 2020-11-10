@@ -9,12 +9,12 @@ uv_loop_t *Loop::loop = nullptr;
 
 void Loop::ClassInit()
 {
-//    
+    DepLibUV::ClassInit();
 }
 
 uv_loop_t* Loop::FetchLoop()
 {
-    loop = uv_loop_new();
+    loop = DepLibUV::GetLoop();
     if (loop == nullptr || uWS::Loop::get(loop) == nullptr) {
         PMS_ERROR("Creating uWS loop failed.");
         return nullptr;

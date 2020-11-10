@@ -366,6 +366,14 @@ int RtcSession::Play(std::string sdp)
         }
     }
 
+    for (auto it = m_consumerParameters.begin(); it != m_consumerParameters.end();) {
+        if (it->rtpParameters.encodings.size() == 0) {
+            m_consumerParameters.erase(it);
+        } else {
+            it++;
+        }
+    }
+
     Request request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate router request error",

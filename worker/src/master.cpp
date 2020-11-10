@@ -30,6 +30,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    pingos::Loop::ClassInit();
     pingos::Log::ClassInit(pingos::Configuration::log.file, pingos::Configuration::log.fileLevel, pingos::Configuration::log.fileLevel);
     pingos::Master::ClassInit(pingos::Loop::FetchLoop());
 
@@ -71,7 +72,7 @@ int main(int argc, char **argv)
         }
     }
 
-    pingos::HttpServer http, https;
+    pingos::HttpServer http;
 
     if (pingos::Configuration::http.port) {
         if (http.Accept(pingos::Configuration::http.listenIp,
@@ -86,7 +87,7 @@ int main(int argc, char **argv)
         !pingos::Configuration::http.keyFile.empty() &&
         pingos::Configuration::http.sslPort)
     {
-        if (https.Accept(pingos::Configuration::http.listenIp,
+        if (http.Accept(pingos::Configuration::http.listenIp,
             pingos::Configuration::http.sslPort,
             pingos::Configuration::http.location,
             pingos::Configuration::http.keyFile,

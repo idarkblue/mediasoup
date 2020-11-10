@@ -81,7 +81,7 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::
         .passphrase = passphrase.c_str()
     });
 
-    this->sslApp->ws<NetConnection>("/*", {
+    this->sslApp->ws<NetConnection>(location, {
         /* Settings */
         .compression = this->compression,
         .maxPayloadLength = this->maxPayloadLength,
