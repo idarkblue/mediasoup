@@ -631,7 +631,7 @@ int SdpInfo::ParseEncodings(json &jsonRtp, std::vector<RTC::RtpEncodingParameter
         }
     }
 
-    if (ssrcInfos.size() == 0) {
+    if (ssrcInfos.size() == 0 && ssrc != 0) {
         SsrcInfo ssrcInfo ;
         ssrcInfo.ssrc = ssrc;
         ssrcInfo.rtxSsrc = 0;
