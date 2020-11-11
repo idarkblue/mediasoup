@@ -20,11 +20,9 @@ public:
     RtcSession *GetPlayer(std::string streamId);
 
 private:
-    // std::string m_server { "" };
-    // std::string this->app { "" };
-    std::string m_streamId { "" };
-    RtcSession *m_publisher { nullptr };
-    std::map<std::string, RtcSession *> m_playersMap;
+    std::string streamId { "" };
+    RtcSession *publisher { nullptr };
+    std::map<std::string, RtcSession *> playersMap;
 };
 
 } // namespace pingos

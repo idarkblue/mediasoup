@@ -31,7 +31,7 @@ int RtcServer::SetMaster(RtcMaster *rtcMaster)
         return -1;
     }
 
-    m_rtcMaster = rtcMaster;
+    this->rtcMaster = rtcMaster;
 
     return 0;
 }
@@ -397,15 +397,15 @@ int RtcServer::Heartbeat(RtcRequest *request)
 
 RtcWorker* RtcServer::FindWorkerByStreamId(std::string streamId)
 {
-    if (!m_rtcMaster) {
+    if (!this->rtcMaster) {
         PMS_ERROR("StreamId[{}] invalid rtc master, while trying to find worker", streamId);
         return nullptr;
     }
 
     size_t hashVal = std::hash<std::string>()(streamId);
-    size_t slot = hashVal % m_rtcMaster->GetWorkerCount();
+    size_t slot = hashVal % this->rtcMaster->GetWorkerCount();
 
-    return m_rtcMaster->FindWorker(slot);
+    return this->rtcMaster->FindWorker(slot);
 }
 
 std::string RtcServer::SpellSessionId()

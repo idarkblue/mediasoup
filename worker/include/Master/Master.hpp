@@ -15,9 +15,6 @@ extern "C" {
 #include <iostream>
 #include <vector>
 #include "Worker.hpp"
-#include "PipeServer.hpp"
-#include "PipeClient.hpp"
-#include "Worker.hpp"
 
 namespace pingos {
 

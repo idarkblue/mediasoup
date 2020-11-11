@@ -124,8 +124,8 @@ protected:
     int ParseRtpMapping(ProducerParameters &producer);
 
 private:
-    std::string m_sdp { "" };
-    std::vector<ProducerParameters*> m_producerParameters;
+    std::string sdp { "" };
+    std::vector<ProducerParameters*> producerParameters;
 };
 
 }

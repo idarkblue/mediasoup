@@ -3,8 +3,6 @@
 #include <string>
 #include <iostream>
 #include <unordered_map>
-#include "PipeServer.hpp"
-#include "PipeClient.hpp"
 #include "UnixStreamSocket.hpp"
 #include "Worker.hpp"
 #include "Master/RtcStream.hpp"
@@ -43,10 +41,10 @@ private:
         std::string sessionId;
     };
 
-    std::unordered_map<uint64_t, RequestWaittingInfo> m_requestWaittingMap;
+    std::unordered_map<uint64_t, RequestWaittingInfo> requestWaittingMap;
 
 private:
-    static std::unordered_map<std::string, RtcStream*> m_streamsMap;
+    static std::unordered_map<std::string, RtcStream*> streamsMap;
 };
 
 }

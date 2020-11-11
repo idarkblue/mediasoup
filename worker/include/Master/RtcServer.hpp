@@ -65,7 +65,7 @@ protected:
     void DeleteSession(RtcSession *session);
 
 private:
-    RtcMaster *m_rtcMaster;
+    RtcMaster *rtcMaster;
 };
 
 }

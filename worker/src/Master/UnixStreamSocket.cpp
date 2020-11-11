@@ -114,11 +114,11 @@ void UnixStreamSocket::UserOnUnixStreamRead()
         if (IsClosed())
             return;
 
-        size_t readLen  = this->bufferDataLen - this->m_msgStart;
+        size_t readLen  = this->bufferDataLen - this->msgStart;
         char* payloadStart = nullptr;
         size_t payloadLen;
         int nsRet = netstring_read(
-            reinterpret_cast<char*>(this->buffer + this->m_msgStart), readLen, &payloadStart, &payloadLen);
+            reinterpret_cast<char*>(this->buffer + this->msgStart), readLen, &payloadStart, &payloadLen);
 
         if (nsRet != 0)
         {
@@ -131,10 +131,10 @@ void UnixStreamSocket::UserOnUnixStreamRead()
                     {
                         // First case: the incomplete message does not begin at position 0 of
                         // the buffer, so move the incomplete message to the position 0.
-                        if (this->m_msgStart != 0)
+                        if (this->msgStart != 0)
                         {
-                            std::memmove(this->buffer, this->buffer + this->m_msgStart, readLen);
-                            this->m_msgStart      = 0;
+                            std::memmove(this->buffer, this->buffer + this->msgStart, readLen);
+                            this->msgStart      = 0;
                             this->bufferDataLen = readLen;
                         }
                         // Second case: the incomplete message begins at position 0 of the buffer.
@@ -145,7 +145,7 @@ void UnixStreamSocket::UserOnUnixStreamRead()
                                 "no more space in the buffer for the unfinished message being parsed, "
                                 "discarding it");
 
-                            this->m_msgStart      = 0;
+                            this->msgStart      = 0;
                             this->bufferDataLen = 0;
                         }
                     }
@@ -191,7 +191,7 @@ void UnixStreamSocket::UserOnUnixStreamRead()
             }
 
             // Error, so reset and exit the parsing loop.
-            this->m_msgStart      = 0;
+            this->msgStart      = 0;
             this->bufferDataLen = 0;
 
             return;
@@ -200,7 +200,7 @@ void UnixStreamSocket::UserOnUnixStreamRead()
         // If here it means that payloadStart points to the beginning of a JSON string
         // with payloadLen bytes length, so recalculate readLen.
         readLen =
-            reinterpret_cast<const uint8_t*>(payloadStart) - (this->buffer + this->m_msgStart) + payloadLen + 1;
+            reinterpret_cast<const uint8_t*>(payloadStart) - (this->buffer + this->msgStart) + payloadLen + 1;
 
         // Notify the listener.
         std::string_view payload {payloadStart, payloadLen};
@@ -208,21 +208,21 @@ void UnixStreamSocket::UserOnUnixStreamRead()
 
         // If there is no more space available in the buffer and that is because
         // the latest parsed message filled it, then empty the full buffer.
-        if ((this->m_msgStart + readLen) == this->bufferSize)
+        if ((this->msgStart + readLen) == this->bufferSize)
         {
-            this->m_msgStart      = 0;
+            this->msgStart      = 0;
             this->bufferDataLen = 0;
         }
         // If there is still space in the buffer, set the beginning of the next
         // parsing to the next position after the parsed message.
         else
         {
-            this->m_msgStart += readLen;
+            this->msgStart += readLen;
         }
 
         // If there is more data in the buffer after the parsed message
         // then parse again. Otherwise break here and wait for more data.
-        if (this->bufferDataLen > this->m_msgStart)
+        if (this->bufferDataLen > this->msgStart)
         {
             continue;
         }

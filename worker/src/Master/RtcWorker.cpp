@@ -7,7 +7,7 @@
 
 namespace pingos {
 
-std::unordered_map<std::string, RtcStream*> RtcWorker::m_streamsMap;
+std::unordered_map<std::string, RtcStream*> RtcWorker::streamsMap;
 
 RtcWorker::RtcWorker(uv_loop_t *loop): Worker(loop)
 {
@@ -40,7 +40,7 @@ int RtcWorker::SendRequest(RtcSession *rtcSession, RtcSession::Request &request)
     info.sessionId = rtcSession->GetSessionId();
     info.streamId = rtcSession->GetStreamId();
 
-    m_requestWaittingMap[request.GetId()] = info;
+    this->requestWaittingMap[request.GetId()] = info;
 
     return 0;
 }
@@ -66,8 +66,8 @@ void RtcWorker::ReceiveChannelAck(json &jsonObject)
 
     auto id = jsonObject["id"].get<uint64_t>();
 
-    auto it = m_requestWaittingMap.find(id);
-    if (it == m_requestWaittingMap.end()) {
+    auto it = this->requestWaittingMap.find(id);
+    if (it == this->requestWaittingMap.end()) {
         PMS_ERROR("Invalid channel ack, miss request, data {}", jsonObject.dump());
         return;
     }
@@ -91,25 +91,25 @@ void RtcWorker::ReceiveChannelEvent(json &jsonObject)
 
 RtcSession *RtcWorker::FindPublisher(std::string streamId)
 {
-    if (m_streamsMap.count(streamId) == 0 || !m_streamsMap[streamId]) {
+    if (RtcWorker::streamsMap.count(streamId) == 0 || !RtcWorker::streamsMap[streamId]) {
         return nullptr;
     }
 
-    return m_streamsMap[streamId]->GetPublisher();
+    return RtcWorker::streamsMap[streamId]->GetPublisher();
 }
 
 RtcSession *RtcWorker::FindRtcSession(std::string streamId, std::string sessionId)
 {
-    if (m_streamsMap.count(streamId) == 0 || !m_streamsMap[streamId]) {
+    if (RtcWorker::streamsMap.count(streamId) == 0 || !RtcWorker::streamsMap[streamId]) {
         return nullptr;
     }
 
-    auto *rtcSession = m_streamsMap[streamId]->GetPublisher();
+    auto *rtcSession = RtcWorker::streamsMap[streamId]->GetPublisher();
     if (rtcSession && rtcSession->GetSessionId() == sessionId) {
         return rtcSession;
     }
 
-    return m_streamsMap[streamId]->GetPlayer(sessionId);
+    return RtcWorker::streamsMap[streamId]->GetPlayer(sessionId);
 }
 
 RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId, RtcSession::Role role)
@@ -133,11 +133,11 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
 
     rtcSession->SetWorker(this);
 
-    if (!m_streamsMap.count(streamId) || !m_streamsMap[streamId]) {
-        m_streamsMap[streamId] = new RtcStream(streamId);
+    if (!RtcWorker::streamsMap.count(streamId) || !RtcWorker::streamsMap[streamId]) {
+        RtcWorker::streamsMap[streamId] = new RtcStream(streamId);
     }
 
-    auto *stream = m_streamsMap[streamId];
+    auto *stream = RtcWorker::streamsMap[streamId];
     if (stream->Join(rtcSession) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}], RTC Session join failed.",
             sessionId, streamId);
@@ -153,12 +153,12 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
 
 void RtcWorker::DeleteSession(std::string streamId, std::string sessionId)
 {
-    if (m_streamsMap.count(streamId) == 0 || !m_streamsMap[streamId]) {
+    if (RtcWorker::streamsMap.count(streamId) == 0 || !RtcWorker::streamsMap[streamId]) {
         PMS_ERROR("SessionId[{}] Stream[{}] delete session failed, stream not found", streamId, sessionId);
         return;
     }
 
-    auto *rtcSession = m_streamsMap[streamId]->RemoveSession(sessionId);
+    auto *rtcSession = RtcWorker::streamsMap[streamId]->RemoveSession(sessionId);
 
     PMS_INFO("SessionId[{}] Stream[{}] delete session success, ptr[{}]",
         sessionId, streamId, (void*)rtcSession);

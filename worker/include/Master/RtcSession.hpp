@@ -141,35 +141,35 @@ private:
 
 private:
 
-    Role m_role;
-    std::string m_sessionId { "" };
-    std::string m_streamId { "" };
-    std::string m_routerId { "" };
-    std::string m_transportId { "" };
-    std::string m_videoProducerId { "" };
-    std::string m_audioProducerId { "" };
-    std::string m_dataProducerId { "" };
-    std::string m_videoConsumerId { "" };
-    std::string m_audioConsumerId { "" };
-    std::string m_dataConsumerId { "" };
+    Role role;
+    std::string sessionId { "" };
+    std::string streamId { "" };
+    std::string routerId { "" };
+    std::string transportId { "" };
+    std::string videoProducerId { "" };
+    std::string audioProducerId { "" };
+    std::string dataProducerId { "" };
+    std::string videoConsumerId { "" };
+    std::string audioConsumerId { "" };
+    std::string dataConsumerId { "" };
 
-    WebRtcTransportParameters m_rtcTransportParameters;
-    std::vector<ProducerParameters> m_producerParameters;
-    std::vector<ConsumerParameters> m_consumerParameters;
+    WebRtcTransportParameters rtcTransportParameters;
+    std::vector<ProducerParameters> producerParameters;
+    std::vector<ConsumerParameters> consumerParameters;
 
-    json m_jsonIceParameters;
-    json m_jsonIceCandidateParameters;
-    json m_jsonDtlsParameters;
+    json jsonIceParameters;
+    json jsonIceCandidateParameters;
+    json jsonDtlsParameters;
 
-    std::list<Listener *> m_listeners;
+    std::list<Listener *> listeners;
 
-    RtcWorker *m_worker;
-    void *m_ctx;
+    RtcWorker *worker;
+    void *ctx;
 
-    Status m_status { Status::IDLE };
+    Status status { Status::IDLE };
 
 private:
-    std::unordered_map<uint64_t, Request> m_requestWaittingMap;
+    std::unordered_map<uint64_t, Request> requestWaittingMap;
 };
 
 }

@@ -20,18 +20,18 @@ RtcStream::~RtcStream()
 int RtcStream::Join(RtcSession *rtcSession)
 {
     if (rtcSession ==nullptr) {
-        PMS_ERROR("streamId[{}] join failed, rtcSession is null", m_streamId);
+        PMS_ERROR("streamId[{}] join failed, rtcSession is null", this->streamId);
 
         return -1;
     }
 
     if (rtcSession->GetRole() == RtcSession::Role::PUBLISHER) {
-        m_publisher = rtcSession;
+        this->publisher = rtcSession;
     } else {
-        m_playersMap[rtcSession->GetSessionId()] = rtcSession;
+        this->playersMap[rtcSession->GetSessionId()] = rtcSession;
     }
 
-    PMS_INFO("streamId[{}] join success, rtcSession[{}]", m_streamId, rtcSession->GetSessionId());
+    PMS_INFO("streamId[{}] join success, rtcSession[{}]", this->streamId, rtcSession->GetSessionId());
 
     return 0;
 }
@@ -40,12 +40,12 @@ RtcSession* RtcStream::RemoveSession(std::string sessionId)
 {
     RtcSession *rtcSession = nullptr;
 
-    if (m_publisher && m_publisher->GetSessionId() == sessionId) {
-        rtcSession = m_publisher;
-        m_publisher = nullptr;
-    } else if (m_playersMap.find(sessionId) != m_playersMap.end()) {
-        rtcSession = m_playersMap[sessionId];
-        m_playersMap.erase(sessionId);
+    if (this->publisher && this->publisher->GetSessionId() == sessionId) {
+        rtcSession = this->publisher;
+        this->publisher = nullptr;
+    } else if (this->playersMap.find(sessionId) != this->playersMap.end()) {
+        rtcSession = this->playersMap[sessionId];
+        this->playersMap.erase(sessionId);
     }
 
     return rtcSession;
@@ -53,16 +53,16 @@ RtcSession* RtcStream::RemoveSession(std::string sessionId)
 
 RtcSession *RtcStream::GetPublisher()
 {
-    return m_publisher;
+    return this->publisher;
 }
 
 RtcSession *RtcStream::GetPlayer(std::string sid)
 {
-    if (m_playersMap.count(sid) == 0) {
+    if (this->playersMap.count(sid) == 0) {
         return nullptr;
     }
 
-    return m_playersMap[sid];
+    return this->playersMap[sid];
 }
 
 } // namespace pingos

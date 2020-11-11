@@ -359,8 +359,6 @@
         'src/Master/UnixStreamSocket.cpp',
         'src/Master/Log.cpp',
         'src/Master/Loop.cpp',
-        'src/Master/PipeServer.cpp',
-        'src/Master/PipeClient.cpp',
         'src/master.cpp',
       ],
       'include_dirs':

@@ -189,7 +189,7 @@ void ConsumerParameters::FillJson(json &jsonObject)
 
 SdpInfo::SdpInfo(std::string sdp)
 {
-    m_sdp = sdp;
+    this->sdp = sdp;
 }
 
 SdpInfo::~SdpInfo()
@@ -202,7 +202,7 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
     std::vector<ProducerParameters> &producerParameters)
 {
     try {
-        auto jsonSdp = sdptransform::parse(m_sdp);
+        auto jsonSdp = sdptransform::parse(this->sdp);
         PMS_DEBUG("transform sdp : {}", jsonSdp.dump());
         if (ParseWebRtcTransport(jsonSdp, rtcTransportParameters) != 0) {
             PMS_ERROR("Parse webrtc transport failed");
@@ -230,7 +230,7 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters, std::vector<
     json jsonSdp;
 
     try {
-        jsonSdp = sdptransform::parse(m_sdp);
+        jsonSdp = sdptransform::parse(this->sdp);
     } catch (const json::parse_error &error) {
         PMS_ERROR("sdp transform failed");
         return -1;

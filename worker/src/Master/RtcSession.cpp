@@ -95,20 +95,20 @@ std::string RtcSession::Role2String(RtcSession::Role role)
 }
 
 RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
-    m_role(role), m_sessionId(sessionId), m_streamId(stream)
+    role(role), sessionId(sessionId), streamId(stream)
 {
     static uint64_t guid = 0;
-    m_routerId = "pingos";
-    m_transportId = sessionId + std::string("-")
+    this->routerId = "pingos";
+    this->transportId = sessionId + std::string("-")
         + Role2String(role) + std::string("-")
         + stream + std::string("-") + std::to_string(guid);
 
     if (role == Role::PUBLISHER) {
-        m_videoProducerId = m_transportId + std::string("-") + std::string("video");
-        m_audioProducerId = m_transportId + std::string("-") + std::string("audio");
+        this->videoProducerId = this->transportId + std::string("-") + std::string("video");
+        this->audioProducerId = this->transportId + std::string("-") + std::string("audio");
     } else {
-        m_videoConsumerId = m_transportId + std::string("-") + std::string("video");
-        m_audioConsumerId = m_transportId + std::string("-") + std::string("audio");
+        this->videoConsumerId = this->transportId + std::string("-") + std::string("video");
+        this->audioConsumerId = this->transportId + std::string("-") + std::string("audio");
     }
 }
 
@@ -119,41 +119,41 @@ RtcSession::~RtcSession()
 
 void RtcSession::AddListener(RtcSession::Listener *listener)
 {
-    m_listeners.push_back(listener);
+    this->listeners.push_back(listener);
 }
 
 void RtcSession::SetWorker(RtcWorker *worker)
 {
-    m_worker = worker;
-    m_status = Status::INITED;
+    this->worker = worker;
+    this->status = Status::INITED;
 }
 
 RtcSession::Role RtcSession::GetRole()
 {
-    return m_role;
+    return this->role;
 }
 
 std::string RtcSession::GetSessionId()
 {
-    return m_sessionId;
+    return this->sessionId;
 }
 
 std::string RtcSession::GetStreamId()
 {
-    return m_streamId;
+    return this->streamId;
 }
 
 std::string RtcSession::GetTransportId()
 {
-    return m_transportId;
+    return this->transportId;
 }
 
 std::string RtcSession::GetProducerId(std::string kind)
 {
     if (kind == "video") {
-        return m_videoProducerId;
+        return this->videoProducerId;
     } else if (kind == "audio") {
-        return m_audioProducerId;
+        return this->audioProducerId;
     }
 
     return "";
@@ -162,9 +162,9 @@ std::string RtcSession::GetProducerId(std::string kind)
 std::string RtcSession::GetConsumerId(std::string kind)
 {
     if (kind == "video") {
-        return m_videoConsumerId;
+        return this->videoConsumerId;
     } else if (kind == "audio") {
-        return m_audioConsumerId;
+        return this->audioConsumerId;
     }
 
     return "";
@@ -172,17 +172,17 @@ std::string RtcSession::GetConsumerId(std::string kind)
 
 std::vector<ProducerParameters> &RtcSession::GetProducerParameters()
 {
-    return m_producerParameters;
+    return this->producerParameters;
 }
 
 void RtcSession::ReceiveChannelAck(json &jsonObject)
 {
     auto id = jsonObject["id"].get<uint64_t>();
-    auto it = m_requestWaittingMap.find(id);
+    auto it = this->requestWaittingMap.find(id);
 
-    if (it == m_requestWaittingMap.end()) {
+    if (it == this->requestWaittingMap.end()) {
         PMS_ERROR("SessionId[{}] streamId[{}] Invalid ack, unknown request id[{}]",
-            m_sessionId, m_streamId, id);
+            this->sessionId, this->streamId, id);
         return;
     }
 
@@ -194,21 +194,21 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
     switch (Channel::Request::string2MethodId[request.GetMethod()]) {
         case Channel::Request::MethodId::ROUTER_CREATE_WEBRTC_TRANSPORT:
         if (jsonAcceptedIt != jsonObject.end()) {
-            m_jsonIceParameters = jsonObject["data"]["iceParameters"];
-            m_jsonIceCandidateParameters = jsonObject["data"]["iceCandidates"];
-            m_jsonDtlsParameters = jsonObject["data"]["dtlsParameters"];
+            this->jsonIceParameters = jsonObject["data"]["iceParameters"];
+            this->jsonIceCandidateParameters = jsonObject["data"]["iceCandidates"];
+            this->jsonDtlsParameters = jsonObject["data"]["dtlsParameters"];
         }
 //        case Channel::Request::MethodId::TRANSPORT_CONNECT:
 //        case Channel::Request::MethodId::TRANSPORT_PRODUCE:
 //        case Channel::Request::MethodId::TRANSPORT_CONSUME:
-        if (m_role == Role::PUBLISHER) {
+        if (this->role == Role::PUBLISHER) {
             ack = "publish";
             if (this->FillAnswer(sdp) != 0) {
                 jsonObject["error"] = 1;
                 jsonObject["reason"] = "create answer sdp failed";
                 jsonErrorIt = jsonObject.find("error");
             }
-        } else if (m_role == Role::PLAYER) {
+        } else if (this->role == Role::PLAYER) {
             ack = "play";
             if (this->FillOffer(sdp) != 0) {
                 jsonObject["error"] = 1;
@@ -220,14 +220,14 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
 
         default:
         PMS_INFO("SessionId[{}] StreamId[{}] ignore ack[{}] response",
-            m_sessionId, m_streamId, request.GetMethod());
+            this->sessionId, this->streamId, request.GetMethod());
         return;
         break;
     }
 
     json jsonAck = json::object();
-    jsonAck["sessionId"] = m_sessionId;
-    jsonAck["streamId"] = m_streamId;
+    jsonAck["sessionId"] = this->sessionId;
+    jsonAck["streamId"] = this->streamId;
     jsonAck["ack"] = ack;
     if (jsonErrorIt != jsonObject.end()) {
         std::string reason;
@@ -243,10 +243,10 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
         jsonAck["error"] = 0;
         jsonAck["reason"] = "OK";
         jsonAck["data"] = jsonObject["data"];
-        m_status = Status::TRANSPORT_CREATED;
+        this->status = Status::TRANSPORT_CREATED;
     }
 
-    for (auto listener : m_listeners) {
+    for (auto listener : this->listeners) {
         listener->OnRtcSessionAck(this, jsonAck);
     }
 }
@@ -254,12 +254,12 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
 void RtcSession::ReceiveChannelEvent(json &jsonObject)
 {
     PMS_INFO("SessionId[{}] streamId[{}] receive event[{}]",
-        m_sessionId, m_streamId, jsonObject.dump());
+        this->sessionId, this->streamId, jsonObject.dump());
 
-    jsonObject["sessionId"] = m_sessionId;
-    jsonObject["streamId"] = m_streamId;
+    jsonObject["sessionId"] = this->sessionId;
+    jsonObject["streamId"] = this->streamId;
 
-    for (auto listener : m_listeners) {
+    for (auto listener : this->listeners) {
         listener->OnRtcSessionEvent(this, jsonObject);
     }
 }
@@ -268,63 +268,63 @@ int RtcSession::Publish(std::string sdp)
 {
     SdpInfo si(sdp);
 
-    if (si.TransformSdp(m_rtcTransportParameters, m_producerParameters) != 0) {
+    if (si.TransformSdp(this->rtcTransportParameters, this->producerParameters) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, Transform sdp error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     Request request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate router request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, run router request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (GenerateWebRtcTransportRequest("router.createWebRtcTransport", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate webrtctransport request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, run webrtctransport request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (GenerateWebRtcTransportRequest("transport.connect", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, transport connect request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, run transport connect request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
-    for (auto &producer : m_producerParameters) {
+    for (auto &producer : this->producerParameters) {
         if (GenerateProducerRequest("transport.produce", producer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate producer[{}] request error",
-                m_sessionId, m_streamId, producer.kind);
+                this->sessionId, this->streamId, producer.kind);
             return -1;
         }
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, run producer[{}] request error",
-                m_sessionId, m_streamId, producer.kind);
+                this->sessionId, this->streamId, producer.kind);
             return -1;
         }
     }
 
-    PMS_INFO("SessionId[{}] StreamId[{}] publish success", m_sessionId, m_streamId);
+    PMS_INFO("SessionId[{}] StreamId[{}] publish success", this->sessionId, this->streamId);
 
     return 0;
 }
@@ -333,29 +333,29 @@ int RtcSession::Play(std::string sdp)
 {
     SdpInfo si(sdp);
 
-    if (si.TransformSdp(m_rtcTransportParameters, m_consumerParameters) != 0) {
+    if (si.TransformSdp(this->rtcTransportParameters, this->consumerParameters) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, Transform sdp error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
-    for (auto &producer : m_producerParameters) {
-        for (auto &consumer : m_consumerParameters) {
+    for (auto &producer : this->producerParameters) {
+        for (auto &consumer : this->consumerParameters) {
             if (producer.kind != consumer.kind) {
                 continue;
             }
 
             if (consumer.SetRtpParameters(producer) != 0) {
                 PMS_ERROR("SessionId[{}] StreamId[{}] Set consumer's rtp parameters failed",
-                    m_sessionId, m_streamId);
+                    this->sessionId, this->streamId);
                 return -1;
             }
         }
     }
 
-    // for (auto it = m_consumerParameters.begin(); it != m_consumerParameters.end();) {
+    // for (auto it = this->consumerParameters.begin(); it != this->consumerParameters.end();) {
     //     if (it->rtpParameters.encodings.size() == 0) {
-    //         m_consumerParameters.erase(it);
+    //         this->consumerParameters.erase(it);
     //     } else {
     //         it++;
     //     }
@@ -364,54 +364,54 @@ int RtcSession::Play(std::string sdp)
     Request request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate router request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run router request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (GenerateWebRtcTransportRequest("router.createWebRtcTransport", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate webrtctransport request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run webrtctransport request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (GenerateWebRtcTransportRequest("transport.connect", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, transport connect request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run transport connect request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
-    for (auto &consumer : m_consumerParameters) {
+    for (auto &consumer : this->consumerParameters) {
         if (GenerateConsumerRequest("transport.consume", consumer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate consumer[{}] request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] play failed, consumer[{}] run request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
     }
 
-    PMS_INFO("SessionId[{}] StreamId[{}] play success", m_sessionId, m_streamId);
+    PMS_INFO("SessionId[{}] StreamId[{}] play success", this->sessionId, this->streamId);
 
     return 0;
 }
@@ -420,20 +420,20 @@ int RtcSession::Pause(std::string kind)
 {
     Request request;
 
-    for (auto &consumer : m_consumerParameters) {
+    for (auto &consumer : this->consumerParameters) {
         if (kind != consumer.kind) {
             continue;
         }
 
         if (GenerateConsumerRequest("consume.pause", consumer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, generate consumer[{}] request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
 
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, consumer[{}] run request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
     }
@@ -445,20 +445,20 @@ int RtcSession::Resume(std::string kind)
 {
     Request request;
 
-    for (auto &consumer : m_consumerParameters) {
+    for (auto &consumer : this->consumerParameters) {
         if (kind != consumer.kind) {
             continue;
         }
 
         if (GenerateConsumerRequest("consume.resume", consumer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, generate consumer[{}] request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
 
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, consumer[{}] run request error",
-                m_sessionId, m_streamId, consumer.kind);
+                this->sessionId, this->streamId, consumer.kind);
             return -1;
         }
     }
@@ -468,13 +468,13 @@ int RtcSession::Resume(std::string kind)
 
 int RtcSession::Close()
 {
-    if (m_status == Status::CLOSED) {
+    if (this->status == Status::CLOSED) {
         PMS_WARN("SessionId[{}] StreamId[{}] the session has been closed",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return 0;
     }
 
-    if (m_role != Role::PUBLISHER && m_role != Role::PLAYER) {
+    if (this->role != Role::PUBLISHER && this->role != Role::PLAYER) {
         return 0;
     }
 
@@ -482,17 +482,17 @@ int RtcSession::Close()
 
     if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] close failed, run request error",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
-    m_status = Status::CLOSED;
+    this->status = Status::CLOSED;
 
     return 0;
 }
@@ -504,27 +504,27 @@ int RtcSession::GetLocalSdp(std::string &sdp)
 
 void RtcSession::AddLocalAddress(std::string ip, std::string announcedIp)
 {
-    m_rtcTransportParameters.AddLocalAddr(ip, announcedIp);
+    this->rtcTransportParameters.AddLocalAddr(ip, announcedIp);
 }
 
 int RtcSession::SetProducerParameters(RtcSession &rtcSession)
 {
-    m_producerParameters = rtcSession.GetProducerParameters();
+    this->producerParameters = rtcSession.GetProducerParameters();
 
-    m_videoProducerId = rtcSession.GetProducerId("video");
-    m_audioProducerId = rtcSession.GetProducerId("audio");
+    this->videoProducerId = rtcSession.GetProducerId("video");
+    this->audioProducerId = rtcSession.GetProducerId("audio");
 
     return 0;
 }
 
 void RtcSession::SetContext(void *ctx)
 {
-    m_ctx = ctx;
+    this->ctx = ctx;
 }
 
 void* RtcSession::GetContext()
 {
-    return m_ctx;
+    return this->ctx;
 }
 
 int RtcSession::GenerateRouterRequest(std::string method, Request &request)
@@ -533,14 +533,14 @@ int RtcSession::GenerateRouterRequest(std::string method, Request &request)
 
     if (Channel::Request::string2MethodId.count(method) == 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
     json jsonInternal = json::object();
     json jsonData = json::object();
 
-    jsonInternal["routerId"] = this->m_routerId;
+    jsonInternal["routerId"] = this->routerId;
 
     switch (Channel::Request::string2MethodId[method]) {
         case Channel::Request::MethodId::WORKER_CREATE_ROUTER:
@@ -551,7 +551,7 @@ int RtcSession::GenerateRouterRequest(std::string method, Request &request)
         break;
         default:
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, method {} not supportted",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
@@ -569,22 +569,22 @@ int RtcSession::GenerateWebRtcTransportRequest(std::string method, Request &requ
 
     if (Channel::Request::string2MethodId.count(method) == 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
     json jsonInternal = json::object();
     json jsonData = json::object();
 
-    jsonInternal["routerId"] = this->m_routerId;
-    jsonInternal["transportId"] = this->m_transportId;
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = this->transportId;
 
     switch (Channel::Request::string2MethodId[method]) {
         case Channel::Request::MethodId::ROUTER_CREATE_WEBRTC_TRANSPORT:
-        m_rtcTransportParameters.FillJsonTransport(jsonData);
+        this->rtcTransportParameters.FillJsonTransport(jsonData);
         break;
 
         case Channel::Request::MethodId::TRANSPORT_CONNECT:
-        m_rtcTransportParameters.FillJsonDtls(jsonData);
+        this->rtcTransportParameters.FillJsonDtls(jsonData);
         break;
 
         case Channel::Request::MethodId::TRANSPORT_GET_STATS:
@@ -594,7 +594,7 @@ int RtcSession::GenerateWebRtcTransportRequest(std::string method, Request &requ
 
         default:
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, method {} not supportted",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
@@ -610,30 +610,30 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Re
 
     if (Channel::Request::string2MethodId.count(method) == 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
     std::string producerId = "";
     if (kind == "video") {
-        producerId = m_videoProducerId;
+        producerId = this->videoProducerId;
     } else if (kind == "audio") {
-        producerId = m_audioProducerId;
+        producerId = this->audioProducerId;
     } else {
-        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid kind {}", m_sessionId, m_streamId, kind);
+        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid kind {}", this->sessionId, this->streamId, kind);
         return -1;
     }
 
     json jsonInternal = json::object();
     json jsonData = json::object();
 
-    jsonInternal["routerId"] = this->m_routerId;
-    jsonInternal["transportId"] = this->m_transportId;
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = this->transportId;
     jsonInternal["producerId"] = producerId;
 
     switch (Channel::Request::string2MethodId[method]) {
         case Channel::Request::MethodId::TRANSPORT_PRODUCE:
-        for (auto &producer : m_producerParameters) {
+        for (auto &producer : this->producerParameters) {
             if (producer.kind == kind) {
                 producer.FillJson(jsonData);
                 break;
@@ -650,7 +650,7 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Re
 
         default:
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, method {} not supportted",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
@@ -666,7 +666,7 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Re
 
     if (Channel::Request::string2MethodId.count(method) == 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
@@ -674,27 +674,27 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Re
     std::string producerId = "";
 
     if (kind == "video") {
-        consumerId = m_videoConsumerId;
-        producerId = m_videoProducerId;
+        consumerId = this->videoConsumerId;
+        producerId = this->videoProducerId;
     } else if (kind == "audio") {
-        consumerId = m_audioConsumerId;
-        producerId = m_audioProducerId;
+        consumerId = this->audioConsumerId;
+        producerId = this->audioProducerId;
     } else {
-        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid kind {}", m_sessionId, m_streamId, kind);
+        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid kind {}", this->sessionId, this->streamId, kind);
         return -1;
     }
 
     json jsonInternal = json::object();
     json jsonData = json::object();
 
-    jsonInternal["routerId"] = this->m_routerId;
-    jsonInternal["transportId"] = this->m_transportId;
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = this->transportId;
     jsonInternal["consumerId"] = consumerId;
     jsonInternal["producerId"] = producerId;
 
     switch (Channel::Request::string2MethodId[method]) {
         case Channel::Request::MethodId::TRANSPORT_CONSUME:
-        for (auto &consumer : m_consumerParameters) {
+        for (auto &consumer : this->consumerParameters) {
             if (consumer.kind == kind) {
                 consumer.FillJson(jsonData);
                 break;
@@ -711,7 +711,7 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Re
 
         default:
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, method {} not supportted",
-            m_sessionId, m_streamId, method);
+            this->sessionId, this->streamId, method);
         return -1;
     }
 
@@ -723,26 +723,26 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Re
 
 int RtcSession::ActiveRtcSessionRequest(Request &request)
 {
-    if (m_worker->SendRequest(this, request) != 0) {
+    if (this->worker->SendRequest(this, request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] run request failed",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
 
         return -1;
     }
 
-    m_requestWaittingMap[request.GetId()] = request;
+    this->requestWaittingMap[request.GetId()] = request;
 
     return 0;
 }
 
 int RtcSession::FillOffer(std::string &sdp)
 {
-    if (m_jsonIceParameters.is_null() ||
-        m_jsonIceCandidateParameters.is_null() ||
-        m_jsonDtlsParameters.is_null())
+    if (this->jsonIceParameters.is_null() ||
+        this->jsonIceCandidateParameters.is_null() ||
+        this->jsonDtlsParameters.is_null())
     {
         PMS_ERROR("SessionId[{}] StreamId[{}] Ice dtls parameters needed",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
@@ -752,7 +752,7 @@ int RtcSession::FillOffer(std::string &sdp)
     std::string mids = "";
 
     // sdp: media
-    for (auto &consumer : m_consumerParameters) {
+    for (auto &consumer : this->consumerParameters) {
         jsonMedias.emplace_back(json::object());
         auto &jsonMedia = jsonMedias[jsonMedias.size() - 1];
 
@@ -761,7 +761,7 @@ int RtcSession::FillOffer(std::string &sdp)
         // sdp: media: candidates
         if (this->FillCandidates(jsonMedia["candidates"]) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] Fill ice candidate failed",
-                m_sessionId, m_streamId);
+                this->sessionId, this->streamId);
             return -1;
         }
 
@@ -776,10 +776,10 @@ int RtcSession::FillOffer(std::string &sdp)
         }
 
         // sdp: media: fingerprint
-        if (m_rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
-            for (auto &jsonItem : m_jsonDtlsParameters["fingerprints"]) {
+        if (this->rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
+            for (auto &jsonItem : this->jsonDtlsParameters["fingerprints"]) {
                 if (jsonItem["algorithm"].get<std::string>()
-                    == m_rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
+                    == this->rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
                 {
                     jsonMedia["fingerprint"]["type"] = jsonItem["algorithm"].get<std::string>();
                     jsonMedia["fingerprint"]["hash"] = jsonItem["value"].get<std::string>();
@@ -789,15 +789,15 @@ int RtcSession::FillOffer(std::string &sdp)
         }
 
         // sdp: media: ice
-        jsonMedia["icePwd"] = m_jsonIceParameters["password"].get<std::string>();
-        jsonMedia["iceUfrag"] = m_jsonIceParameters["usernameFragment"].get<std::string>();
+        jsonMedia["icePwd"] = this->jsonIceParameters["password"].get<std::string>();
+        jsonMedia["iceUfrag"] = this->jsonIceParameters["usernameFragment"].get<std::string>();
 
         // sdp: media: setup
-        if (m_jsonDtlsParameters["role"] == "server") {
+        if (this->jsonDtlsParameters["role"] == "server") {
             jsonMedia["setup"] = "passive";
-        } else if (m_jsonDtlsParameters["role"] == "client") {
+        } else if (this->jsonDtlsParameters["role"] == "client") {
             jsonMedia["setup"] = "active";
-        } else if (m_jsonDtlsParameters["role"] == "auto") {
+        } else if (this->jsonDtlsParameters["role"] == "auto") {
             jsonMedia["setup"] = "active";
         }
 
@@ -994,9 +994,9 @@ int RtcSession::FillOffer(std::string &sdp)
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;
     jsonSdp["origin"]["netType"] = "IN";
-    jsonSdp["origin"]["sessionId"] = m_rtcTransportParameters.sessionId;
+    jsonSdp["origin"]["sessionId"] = this->rtcTransportParameters.sessionId;
     jsonSdp["origin"]["sessionVersion"] = 2;
-    jsonSdp["origin"]["username"] = m_rtcTransportParameters.uesrName;
+    jsonSdp["origin"]["username"] = this->rtcTransportParameters.uesrName;
 
     jsonSdp["timing"]["start"] = 0;
     jsonSdp["timing"]["stop"] = 0;
@@ -1005,20 +1005,20 @@ int RtcSession::FillOffer(std::string &sdp)
 
     sdp = sdptransform::write(jsonSdp);
 
-    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", m_sessionId, m_streamId, jsonSdp.dump());
-    PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", m_sessionId, m_streamId, sdp);
+    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", this->sessionId, this->streamId, jsonSdp.dump());
+    PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", this->sessionId, this->streamId, sdp);
 
     return 0;
 }
 
 int RtcSession::FillAnswer(std::string &sdp)
 {
-    if (m_jsonIceParameters.is_null() ||
-        m_jsonIceCandidateParameters.is_null() ||
-        m_jsonDtlsParameters.is_null())
+    if (this->jsonIceParameters.is_null() ||
+        this->jsonIceCandidateParameters.is_null() ||
+        this->jsonDtlsParameters.is_null())
     {
         PMS_ERROR("SessionId[{}] StreamId[{}] Ice dtls parameters needed",
-            m_sessionId, m_streamId);
+            this->sessionId, this->streamId);
         return -1;
     }
 
@@ -1028,7 +1028,7 @@ int RtcSession::FillAnswer(std::string &sdp)
     std::string mids = "";
 
     // sdp: media
-    for (auto &producer : m_producerParameters) {
+    for (auto &producer : this->producerParameters) {
         jsonMedias.emplace_back(json::object());
         auto &jsonMedia = jsonMedias[jsonMedias.size() - 1];
 
@@ -1037,7 +1037,7 @@ int RtcSession::FillAnswer(std::string &sdp)
         // sdp: media: candidates
         if (this->FillCandidates(jsonMedia["candidates"]) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] Fill ice candidate failed",
-                m_sessionId, m_streamId);
+                this->sessionId, this->streamId);
             return -1;
         }
 
@@ -1052,10 +1052,10 @@ int RtcSession::FillAnswer(std::string &sdp)
         }
 
         // sdp: media: fingerprint
-        if (m_rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
-            for (auto &jsonItem : m_jsonDtlsParameters["fingerprints"]) {
+        if (this->rtcTransportParameters.dtlsParameters.fingerprints.size() > 0) {
+            for (auto &jsonItem : this->jsonDtlsParameters["fingerprints"]) {
                 if (jsonItem["algorithm"].get<std::string>()
-                    == m_rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
+                    == this->rtcTransportParameters.dtlsParameters.fingerprints[0].algorithm)
                 {
                     jsonMedia["fingerprint"]["type"] = jsonItem["algorithm"].get<std::string>();
                     jsonMedia["fingerprint"]["hash"] = jsonItem["value"].get<std::string>();
@@ -1065,15 +1065,15 @@ int RtcSession::FillAnswer(std::string &sdp)
         }
 
         // sdp: media: ice
-        jsonMedia["icePwd"] = m_jsonIceParameters["password"].get<std::string>();
-        jsonMedia["iceUfrag"] = m_jsonIceParameters["usernameFragment"].get<std::string>();
+        jsonMedia["icePwd"] = this->jsonIceParameters["password"].get<std::string>();
+        jsonMedia["iceUfrag"] = this->jsonIceParameters["usernameFragment"].get<std::string>();
 
         // sdp: media: setup
-        if (m_jsonDtlsParameters["role"] == "server") {
+        if (this->jsonDtlsParameters["role"] == "server") {
             jsonMedia["setup"] = "passive";
-        } else if (m_jsonDtlsParameters["role"] == "client") {
+        } else if (this->jsonDtlsParameters["role"] == "client") {
             jsonMedia["setup"] = "active";
-        } else if (m_jsonDtlsParameters["role"] == "auto") {
+        } else if (this->jsonDtlsParameters["role"] == "auto") {
             jsonMedia["setup"] = "active";
         }
 
@@ -1271,9 +1271,9 @@ int RtcSession::FillAnswer(std::string &sdp)
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;
     jsonSdp["origin"]["netType"] = "IN";
-    jsonSdp["origin"]["sessionId"] = m_rtcTransportParameters.sessionId;
+    jsonSdp["origin"]["sessionId"] = this->rtcTransportParameters.sessionId;
     jsonSdp["origin"]["sessionVersion"] = 2;
-    jsonSdp["origin"]["username"] = m_rtcTransportParameters.uesrName;
+    jsonSdp["origin"]["username"] = this->rtcTransportParameters.uesrName;
 
     jsonSdp["timing"]["start"] = 0;
     jsonSdp["timing"]["stop"] = 0;
@@ -1282,8 +1282,8 @@ int RtcSession::FillAnswer(std::string &sdp)
 
     sdp = sdptransform::write(jsonSdp);
 
-    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", m_sessionId, m_streamId, jsonSdp.dump());
-    PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", m_sessionId, m_streamId, sdp);
+    PMS_DEBUG("SessionId[{}] StreamId[{}] jsonSdp {}", this->sessionId, this->streamId, jsonSdp.dump());
+    PMS_DEBUG("SessionId[{}] StreamId[{}] sdp {}", this->sessionId, this->streamId, sdp);
 
     return 0;
 
@@ -1292,7 +1292,7 @@ int RtcSession::FillAnswer(std::string &sdp)
 int RtcSession::FillCandidates(json &jsonObject)
 {
     jsonObject = json::array();
-    for (auto &jsonCandidate : m_jsonIceCandidateParameters) {
+    for (auto &jsonCandidate : this->jsonIceCandidateParameters) {
         json jsonItem;
         jsonItem["foundation"] = jsonCandidate["foundation"].get<std::string>();
         jsonItem["ip"] = jsonCandidate["ip"].get<std::string>();
