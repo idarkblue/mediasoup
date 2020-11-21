@@ -64,16 +64,6 @@ int NetConnection::Padding(std::string_view data)
     return 0;
 }
 
-void NetConnection::SetUri(std::string uri)
-{
-    m_uri = uri;
-}
-
-std::string NetConnection::GetUri()
-{
-    return m_uri;
-}
-
 const char *NetConnection::GetData()
 {
     return m_receivedData.c_str();

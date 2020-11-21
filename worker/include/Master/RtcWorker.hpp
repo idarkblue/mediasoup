@@ -5,7 +5,8 @@
 #include <unordered_map>
 #include "UnixStreamSocket.hpp"
 #include "Worker.hpp"
-#include "Master/RtcStream.hpp"
+#include "RtcStream.hpp"
+#include "Worker/ChannelRequest.hpp"
 
 extern "C" {
     #include <uv.h>
@@ -19,7 +20,7 @@ public:
     RtcWorker(uv_loop_t *loop);
     virtual ~RtcWorker();
 
-    int SendRequest(RtcSession *rtcSession, RtcSession::Request &request);
+    int SendRequest(RtcSession *rtcSession, ChannelRequest &request);
 
 public: // Implement Worker
     virtual int ReceiveMasterMessage(std::string &payload) override;
@@ -27,7 +28,7 @@ public: // Implement Worker
 
 public:
     RtcSession *FindPublisher(std::string streamId);
-    RtcSession *FindRtcSession(std::string streamId, std::string sessionId);
+    RtcSession *FindSession(std::string streamId, std::string sessionId);
     RtcSession *CreateSession(std::string streamId, std::string sessionId, RtcSession::Role role);
     void DeleteSession(std::string streamId, std::string sessionId);
 

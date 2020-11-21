@@ -135,6 +135,35 @@ void ProducerParameters::FillJson(json &jsonObject)
     jsonObject["rtpMapping"] = jsonRtpMapping;
 }
 
+int ProducerParameters::GenerateConsumer(ConsumerParameters &consumer)
+{
+    consumer.kind = this->kind;
+    consumer.paused = this->paused;
+    consumer.direction = "recvonly";
+    consumer.rtpParameters = this->rtpParameters;
+    for (auto &encoding : this->rtpParameters.encodings) {
+        encoding.hasCodecPayloadType = false;
+    }
+
+    consumer.consumableRtpEncodings = this->rtpParameters.encodings;
+
+    size_t i = 0;
+    for (auto &cp : consumer.consumableRtpEncodings) {
+        cp.rtx = RTC::RtpRtxParameters();
+        cp.hasRtx = false;
+
+        if (i >= this->rtpMapping.encodings.size()) {
+            return -1;
+        }
+
+        auto &encoding = this->rtpMapping.encodings[i];
+        cp.ssrc = encoding.mappedSsrc;
+        i++;
+    }
+
+    return 0;
+}
+
 int ConsumerParameters::SetRtpParameters(ProducerParameters &producer)
 {
     this->type = "simple";
@@ -466,6 +495,11 @@ int SdpInfo::ParseHeaderExtensions(json &jsonHeaderExtensions, std::vector<RTC::
         JSON_READ_VALUE_ASSERT(jsonExtension, "uri", std::string, ext.uri)
         JSON_READ_VALUE_ASSERT(jsonExtension, "value", uint8_t, ext.id)
 
+        json jsonExt;
+
+        jsonExt["uri"] = ext.uri;
+        jsonExt["id"] = ext.id;
+
         ext.type = RTC::RtpHeaderExtensionUri::GetType(ext.uri);
 
         if (ext.type == RTC::RtpHeaderExtensionUri::Type::UNKNOWN) {
@@ -473,7 +507,7 @@ int SdpInfo::ParseHeaderExtensions(json &jsonHeaderExtensions, std::vector<RTC::
             continue;
         }
 
-        headerExtensions.push_back(ext);
+        headerExtensions.emplace_back(jsonExt);
     }
 
     return 0;
@@ -548,7 +582,11 @@ int SdpInfo::ParseCodecs(json &jsonRtp, std::vector<RTC::RtpCodecParameters> &co
                     RTC::RtcpFeedback fb;
                     JSON_READ_VALUE_ASSERT(jsonRtcpFb, "type", std::string, fb.type);
                     JSON_READ_VALUE_DEFAULT(jsonRtcpFb, "subtype", std::string, fb.parameter, "");
-                    codec.rtcpFeedback.push_back(fb);
+
+                    json jsonFb;
+                    jsonFb["type"] = fb.type;
+                    jsonFb["parameter"] = fb.parameter;
+                    codec.rtcpFeedback.emplace_back(jsonFb);
                 }
             }
 
@@ -694,7 +732,7 @@ int SdpInfo::ParseRtpMapping(ProducerParameters &producer)
         } else {
             rtpEncoding.mappedSsrc = MAPPED_VIDEO_SSRC;
         }
-        encodingsMapping.push_back(rtpEncoding);
+        encodingsMapping.emplace_back(rtpEncoding);
     }
 
     return 0;

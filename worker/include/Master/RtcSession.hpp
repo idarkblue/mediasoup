@@ -5,20 +5,22 @@
 #include <unordered_map>
 #include "json.hpp"
 #include "SdpInfo.hpp"
+#include "Worker/ChannelRequest.hpp"
+#include "Worker/PlainTransportConstructor.hpp"
 
 namespace pingos {
 
 class RtcSession;
 class RtcWorker;
-
+/*
 class RtcEvent {
 public:
     enum EventId {
-        PUBLISH,
-        PLAY,
-        MUTE,
+        ERROR,
+        TRANSPORT,
         ICE,
-        DTLS
+        DTLS,
+
     };
 
     static std::unordered_map<EventId, std::string> eventId2String;
@@ -35,33 +37,9 @@ public:
     EventId eventId;
     json jsonData;
 };
+*/
 
 class RtcSession {
-public:
-    class Request {
-    public:
-        Request() = default;
-        Request(const std::string method);
-        virtual ~Request();
-
-        void Init(const std::string method);
-        uint64_t GetId();
-        std::string GetMethod();
-
-    public:
-        void FillJson(json &jsonObject);
-
-    public:
-        void SetInternal(json &jsonObject);
-        void SetData(json &jsonObject);
-
-    private:
-        uint64_t m_id { 0 };
-        std::string m_method { "" };
-        json m_jsonInternal;
-        json m_jsonData;
-        static uint64_t m_requestId;
-    };
 
 public:
     enum Status {
@@ -84,9 +62,11 @@ public:
         NONE,
         PUBLISHER,
         PLAYER,
+        RTSP_PLAYER,
         MONITOR
     };
     static std::string Role2String(Role role);
+    static RtcSession::Role String2Role(std::string role);
 
 public:
     RtcSession(Role role, std::string sessionId, std::string stream);
@@ -105,11 +85,11 @@ public:
 
 public:
     void ReceiveChannelAck(json &jsonObject);
-    void ReceiveChannelEvent(json &jsonObject);
 
 public:
     int Publish(std::string sdp);
     int Play(std::string sdp);
+    int PlainPlay();
 
     int Pause(std::string kind);
     int Resume(std::string kind);
@@ -117,30 +97,36 @@ public:
     int Close();
 
 public:
-    int SetRemoteSdp(std::string sdp);
-    int GetLocalSdp(std::string &sdp);
+    int SetConsumerParameters(std::vector<ConsumerParameters> &consumerParameters);
+    int CreatePlainTransport(PlainTransportConstructor &plainTransportParameters);
+    int ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort);
+    int Play(bool hasAudio, bool hasVideo, bool hasData = false);
 
+public:
     void AddLocalAddress(std::string ip, std::string announcedIp);
     int SetProducerParameters(RtcSession &rtcSession);
     void SetContext(void *ctx);
     void* GetContext();
 
 protected:
-    int GenerateRouterRequest(std::string method, Request &request);
-    int GenerateWebRtcTransportRequest(std::string method, Request &request);
-    int GenerateProducerRequest(std::string method, std::string kind, Request &request);
-    int GenerateConsumerRequest(std::string method, std::string kind, Request &request);
+    int GenerateRouterRequest(std::string method, ChannelRequest &request);
+    int GeneratePlainTransportRequest(std::string method, ChannelRequest &request);
+    int GenerateWebRtcTransportRequest(std::string method, ChannelRequest &request);
+    int GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request);
+    int GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request);
 
 private:
-    int ActiveRtcSessionRequest(Request &request);
-    void ActiveRtcSessionEvent(Request &request, json &jsonObject);
+    int ActiveRtcSessionRequest(ChannelRequest &request);
+    void ActiveRtcSessionEvent(ChannelRequest &request, json &jsonObject);
 
     int FillOffer(std::string &sdp);
     int FillAnswer(std::string &sdp);
     int FillCandidates(json &jsonObject);
 
 private:
+    void FireEvent(std::string event, json& data);
 
+private:
     Role role;
     std::string sessionId { "" };
     std::string streamId { "" };
@@ -168,8 +154,10 @@ private:
 
     Status status { Status::IDLE };
 
+    std::string transportType;
+
 private:
-    std::unordered_map<uint64_t, Request> requestWaittingMap;
+    std::unordered_map<uint64_t, ChannelRequest> requestWaittingMap;
 };
 
 }

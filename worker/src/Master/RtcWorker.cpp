@@ -22,7 +22,7 @@ int RtcWorker::ReceiveMasterMessage(std::string &payload)
     return 0;
 }
 
-int RtcWorker::SendRequest(RtcSession *rtcSession, RtcSession::Request &request)
+int RtcWorker::SendRequest(RtcSession *rtcSession, ChannelRequest &request)
 {
     json jsonObject = json::object();
 
@@ -74,7 +74,7 @@ void RtcWorker::ReceiveChannelAck(json &jsonObject)
 
     auto &info = it->second;
 
-    auto rtcSession = this->FindRtcSession(info.streamId, info.sessionId);
+    auto rtcSession = this->FindSession(info.streamId, info.sessionId);
     if (rtcSession == nullptr) {
         PMS_ERROR("SessionId[{}] StreamId[{}] Invalid channel ack, miss rtc session, data {}",
             info.sessionId, info.streamId, jsonObject.dump());
@@ -98,7 +98,7 @@ RtcSession *RtcWorker::FindPublisher(std::string streamId)
     return RtcWorker::streamsMap[streamId]->GetPublisher();
 }
 
-RtcSession *RtcWorker::FindRtcSession(std::string streamId, std::string sessionId)
+RtcSession *RtcWorker::FindSession(std::string streamId, std::string sessionId)
 {
     if (RtcWorker::streamsMap.count(streamId) == 0 || !RtcWorker::streamsMap[streamId]) {
         return nullptr;
@@ -114,7 +114,7 @@ RtcSession *RtcWorker::FindRtcSession(std::string streamId, std::string sessionI
 
 RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId, RtcSession::Role role)
 {
-    auto *rtcSession = this->FindRtcSession(streamId, sessionId);
+    auto *rtcSession = this->FindSession(streamId, sessionId);
 
     if (rtcSession) {
         PMS_ERROR("SessionId[{}] StreamId[{}], Session already exists",

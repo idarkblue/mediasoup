@@ -43,7 +43,7 @@ protected:
     void OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject) override;
 
 // Implement NetServer::Listener
-public:
+protected:
     virtual int OnMessage(NetConnection *connection) override;
     virtual void OnDisconnect(NetConnection *connection) override;
 
@@ -56,12 +56,8 @@ protected:
     int Heartbeat(RtcRequest *request);
 
 protected:
-    RtcWorker* FindWorkerByStreamId(std::string streamId);
-    Context* GetContext(NetConnection *nc);
-    std::string SpellSessionId();
     RtcSession* CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach);
-    RtcSession* FindRtcSession(std::string streamId, std::string sessionId);
-    RtcSession* FindRtcSession(RtcRequest *request);
+    RtcSession* FindSession(RtcRequest *request);
     void DeleteSession(RtcSession *session);
 
 private:

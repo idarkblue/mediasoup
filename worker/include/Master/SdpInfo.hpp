@@ -61,6 +61,8 @@ public:
     void FillJsonDtls(json &jsonObject);
 };
 
+struct ConsumerParameters;
+
 struct ProducerParameters {
     struct RtpEncodingMapping {
         std::string rid { "" };
@@ -80,6 +82,7 @@ struct ProducerParameters {
     std::string direction { "" };
 
     void FillJson(json &jsonObject);
+    int GenerateConsumer(ConsumerParameters &consumer);
 };
 
 struct ConsumerParameters {

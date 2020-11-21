@@ -581,7 +581,7 @@ a=sctpmap:5000 webrtc-datachannel 1024
 
 ```sdp
 v=0
-o=urtc-client 1603013435498732369 2 IN IP4 0.0.0.0
+o=pingos-client 1603013435498732369 2 IN IP4 0.0.0.0
 s=-
 c=IN IP4 127.0.0.1
 t=0 0
@@ -840,7 +840,7 @@ a=rtcp-rsize
         "netType":"IN",
         "sessionId":1603013435498732369,
         "sessionVersion":2,
-        "username":"urtc-client"
+        "username":"pingos-client"
     },
     "timing":{
         "start":0,

@@ -9,7 +9,7 @@
 namespace pingos {
 
 static std::string OfferMslabel = "pingos-rtc-ms-label";
-
+/*
 std::unordered_map<RtcEvent::EventId, std::string> RtcEvent::eventId2String = {
     { RtcEvent::EventId::PUBLISH, "publish" },
     { RtcEvent::EventId::PLAY, "play" },
@@ -34,64 +34,35 @@ RtcEvent::~RtcEvent()
 {
 
 }
-
-uint64_t RtcSession::Request::m_requestId = 0;
-
-RtcSession::Request::Request(const std::string method)
-{
-    this->Init(method);
-}
-
-RtcSession::Request::~Request()
-{
-
-}
-
-void RtcSession::Request::Init(const std::string method)
-{
-    m_id = m_requestId++;
-    m_method = method;
-    m_jsonInternal = json::object();
-    m_jsonData = json::object();
-
-}
-void RtcSession::Request::SetInternal(json &jsonObject)
-{
-    m_jsonInternal = jsonObject;
-}
-
-void RtcSession::Request::SetData(json &jsonObject)
-{
-    m_jsonData = jsonObject;
-}
-
-uint64_t RtcSession::Request::GetId()
-{
-    return m_id;
-}
-
-std::string RtcSession::Request::GetMethod()
-{
-    return m_method;
-}
-
-void RtcSession::Request::FillJson(json &jsonObject)
-{
-    jsonObject["id"] = m_id;
-    jsonObject["method"] = m_method;
-    jsonObject["internal"] = m_jsonInternal;
-    jsonObject["data"] = m_jsonData;
-}
-
+*/
 std::string RtcSession::Role2String(RtcSession::Role role)
 {
     static std::string role2string[] = {
         "none",
-        "producer",
-        "consumer"
+        "publisher",
+        "player",
+        "rtsp_player",
+        "monitor"
     };
 
     return role2string[role];
+}
+
+RtcSession::Role RtcSession::String2Role(std::string role)
+{
+    static std::map<std::string, RtcSession::Role> string2role = {
+        { "none", RtcSession::Role::NONE },
+        { "publisher", RtcSession::Role::PUBLISHER },
+        { "player", RtcSession::Role::PLAYER },
+        { "rtsp_player", RtcSession::Role::RTSP_PLAYER },
+        { "monitor", RtcSession::Role::MONITOR }
+    };
+
+    if (string2role.find(role) == string2role.end()) {
+        return RtcSession::Role::NONE;
+    }
+
+    return string2role[role];
 }
 
 RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
@@ -115,6 +86,10 @@ RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
 RtcSession::~RtcSession()
 {
     this->Close();
+
+    json jsonData = json::object();
+    jsonData["sessionState"] = "closed";
+    this->FireEvent("sessionstatechange", jsonData);
 }
 
 void RtcSession::AddListener(RtcSession::Listener *listener)
@@ -192,6 +167,10 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
     std::string sdp;
     std::string ack;
     switch (Channel::Request::string2MethodId[request.GetMethod()]) {
+        case Channel::Request::MethodId::ROUTER_CREATE_PLAIN_TRANSPORT:
+            ack = "plainTransport";
+        break;
+
         case Channel::Request::MethodId::ROUTER_CREATE_WEBRTC_TRANSPORT:
         if (jsonAcceptedIt != jsonObject.end()) {
             this->jsonIceParameters = jsonObject["data"]["iceParameters"];
@@ -251,19 +230,6 @@ void RtcSession::ReceiveChannelAck(json &jsonObject)
     }
 }
 
-void RtcSession::ReceiveChannelEvent(json &jsonObject)
-{
-    PMS_INFO("SessionId[{}] streamId[{}] receive event[{}]",
-        this->sessionId, this->streamId, jsonObject.dump());
-
-    jsonObject["sessionId"] = this->sessionId;
-    jsonObject["streamId"] = this->streamId;
-
-    for (auto listener : this->listeners) {
-        listener->OnRtcSessionEvent(this, jsonObject);
-    }
-}
-
 int RtcSession::Publish(std::string sdp)
 {
     SdpInfo si(sdp);
@@ -274,7 +240,7 @@ int RtcSession::Publish(std::string sdp)
         return -1;
     }
 
-    Request request;
+    ChannelRequest request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate router request error",
             this->sessionId, this->streamId);
@@ -361,7 +327,7 @@ int RtcSession::Play(std::string sdp)
     //     }
     // }
 
-    Request request;
+    ChannelRequest request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate router request error",
             this->sessionId, this->streamId);
@@ -418,7 +384,7 @@ int RtcSession::Play(std::string sdp)
 
 int RtcSession::Pause(std::string kind)
 {
-    Request request;
+    ChannelRequest request;
 
     for (auto &consumer : this->consumerParameters) {
         if (kind != consumer.kind) {
@@ -443,7 +409,7 @@ int RtcSession::Pause(std::string kind)
 
 int RtcSession::Resume(std::string kind)
 {
-    Request request;
+    ChannelRequest request;
 
     for (auto &consumer : this->consumerParameters) {
         if (kind != consumer.kind) {
@@ -478,7 +444,7 @@ int RtcSession::Close()
         return 0;
     }
 
-    Request request;
+    ChannelRequest request;
 
     if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
@@ -497,8 +463,95 @@ int RtcSession::Close()
     return 0;
 }
 
-int RtcSession::GetLocalSdp(std::string &sdp)
+int RtcSession::SetConsumerParameters(std::vector<ConsumerParameters> &consumerParameters)
 {
+    this->consumerParameters = consumerParameters;
+
+    return 0;
+}
+
+int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportParameters)
+{
+    ChannelRequest request;
+    request.Init("router.createPlainTransport");
+
+    json jsonInternal;
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = this->transportId;
+
+    request.SetInternal(jsonInternal);
+
+    json jsonData;
+    plainTransportParameters.FillJson(jsonData);
+    request.SetData(jsonData);
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run transport connect request error",
+            this->sessionId, this->streamId);
+        return -1;
+    }
+
+    return 0;
+}
+
+int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort)
+{
+    ChannelRequest request;
+    request.Init("transport.connect");
+
+    json jsonInternal;
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = this->transportId;
+
+    json jsonData;
+    jsonData["ip"] = ip;
+    jsonData["port"] = port;
+    jsonData["rtcpPort"] = rtcpPort;
+
+    request.SetData(jsonData);
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run transport connect request error",
+            this->sessionId, this->streamId);
+        return -1;
+    }
+
+    return 0;
+}
+
+int RtcSession::Play(bool hasAudio, bool hasVideo, bool hasData)
+{
+    ChannelRequest request;
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run webrtctransport request error",
+            this->sessionId, this->streamId);
+        return -1;
+    }
+
+    for (auto &consumer : this->consumerParameters) {
+        if ((consumer.kind == "audio" && !hasAudio) ||
+            (consumer.kind == "video" && !hasVideo) ||
+            (consumer.kind == "data" && !hasData))
+        {
+            continue;
+        }
+
+        if (GenerateConsumerRequest("transport.consume", consumer.kind, request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate consumer[{}] request error",
+                this->sessionId, this->streamId, consumer.kind);
+            return -1;
+        }
+
+        if (ActiveRtcSessionRequest(request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] play failed, consumer[{}] run request error",
+                this->sessionId, this->streamId, consumer.kind);
+            return -1;
+        }
+    }
+
+    PMS_INFO("SessionId[{}] StreamId[{}] play success", this->sessionId, this->streamId);
+
     return 0;
 }
 
@@ -527,7 +580,7 @@ void* RtcSession::GetContext()
     return this->ctx;
 }
 
-int RtcSession::GenerateRouterRequest(std::string method, Request &request)
+int RtcSession::GenerateRouterRequest(std::string method, ChannelRequest &request)
 {
     request.Init(method);
 
@@ -563,7 +616,20 @@ int RtcSession::GenerateRouterRequest(std::string method, Request &request)
     return 0;
 }
 
-int RtcSession::GenerateWebRtcTransportRequest(std::string method, Request &request)
+int RtcSession::GeneratePlainTransportRequest(std::string method, ChannelRequest &request)
+{
+    request.Init(method);
+
+    if (Channel::Request::string2MethodId.count(method) == 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
+            this->sessionId, this->streamId, method);
+        return -1;
+    }
+
+    return 0;
+}
+
+int RtcSession::GenerateWebRtcTransportRequest(std::string method, ChannelRequest &request)
 {
     request.Init(method);
 
@@ -604,7 +670,7 @@ int RtcSession::GenerateWebRtcTransportRequest(std::string method, Request &requ
     return 0;
 }
 
-int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Request &request)
+int RtcSession::GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request)
 {
     request.Init(method);
 
@@ -660,7 +726,7 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Re
     return 0;
 }
 
-int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Request &request)
+int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request)
 {
     request.Init(method);
 
@@ -721,7 +787,7 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Re
     return 0;
 }
 
-int RtcSession::ActiveRtcSessionRequest(Request &request)
+int RtcSession::ActiveRtcSessionRequest(ChannelRequest &request)
 {
     if (this->worker->SendRequest(this, request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] run request failed",
@@ -1305,6 +1371,20 @@ int RtcSession::FillCandidates(json &jsonObject)
     }
 
     return 0;
+}
+
+void RtcSession::FireEvent(std::string event, json& data)
+{
+    json jsonRoot = json::object();
+
+    jsonRoot["event"]    = event;
+    jsonRoot["data"]     = data;
+
+    for (auto &listener : this->listeners) {
+        if (listener) {
+            listener->OnRtcSessionEvent(this, jsonRoot);
+        }
+    }
 }
 
 }

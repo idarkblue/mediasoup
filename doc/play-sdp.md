@@ -138,7 +138,7 @@ a=rtpmap:116 ulpfec/90000
 
 ```sdp
 v=0
-o=urtc-client 1603159863350814327 2 IN IP4 0.0.0.0
+o=pingos-client 1603159863350814327 2 IN IP4 0.0.0.0
 s=-
 c=IN IP4 127.0.0.1
 t=0 0
@@ -478,7 +478,7 @@ a=ssrc:476234506 label:d0026a4ba79f0a12bc7c07Y24tZ2Q1093463830VP8_1-3126898112_v
         "netType":"IN",
         "sessionId":1603159863350814327,
         "sessionVersion":2,
-        "username":"urtc-client"
+        "username":"pingos-client"
     },
     "timing":{
         "start":0,

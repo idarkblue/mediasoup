@@ -338,6 +338,15 @@
       'sources':
       [
         # C++ source files.
+        'src/Master/Rtsp/RtspHeader.cpp',
+        'src/Master/Rtsp/RtspRequest.cpp',
+        'src/Master/Rtsp/RtspServer.cpp',
+        'src/Master/Rtsp/TcpConnection.cpp',
+        'src/Master/Rtsp/TcpServer.cpp',
+        'src/Master/Worker/ChannelRequest.cpp',
+        'src/Master/Worker/PlainTransportConstructor.cpp',
+        'src/Master/Worker/RtpParametersConstructor.cpp',
+        'src/Master/Worker/ConsumerConstructor.cpp',
         'src/Master/Pipe.cpp',
         'src/Master/Configuration.cpp',
         'src/Master/RtcServer.cpp',
@@ -355,7 +364,6 @@
         'src/Master/NetServer.cpp',
         'src/Master/Master.cpp',
         'src/Master/Worker.cpp',
-        'src/Master/WorkerRequest.cpp',
         'src/Master/UnixStreamSocket.cpp',
         'src/Master/Log.cpp',
         'src/Master/Loop.cpp',
@@ -363,6 +371,8 @@
       ],
       'include_dirs':
       [
+        'include/Master',
+        'include/Master/Worker',
         'deps/uWebSockets/src',
         'deps/uWebSockets/uSockets/src',
         'deps/uWebSockets/examples',

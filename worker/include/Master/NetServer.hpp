@@ -18,10 +18,6 @@ public:
     void Clear();
 
 public:
-    void SetUri(std::string uri);
-    std::string GetUri();
-
-public:
     int Padding(std::string_view data);
     const char *GetData();
     int GetDataSize();
@@ -40,7 +36,6 @@ public:
     void* GetSession();
 
 private:
-    std::string m_uri { "" };
     bool  m_ssl { false };
     void *m_handle { nullptr };
     void *m_param { nullptr };

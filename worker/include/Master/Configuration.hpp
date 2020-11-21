@@ -38,6 +38,11 @@ struct HttpConfiguration {
     std::string location; // uri, e.g. "/pingos"
 };
 
+struct RtspConfiguration {
+    uint16_t    port; // rtsp port
+    std::string listenIp;
+};
+
 struct WebRtcConfiguration {
     std::string listenIp; // local ip
     std::string announcedIp; // announced ip
@@ -66,6 +71,7 @@ public:
     static LogConfiguration log;
     static WebsocketConfiguration websocket;
     static HttpConfiguration http;
+    static RtspConfiguration rtsp;
     static MasterConfiguration master;
     static WebRtcConfiguration webrtc;
 
