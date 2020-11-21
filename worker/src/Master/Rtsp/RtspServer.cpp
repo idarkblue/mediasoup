@@ -103,7 +103,7 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
     JSON_READ_VALUE_THROW(*jsonRtcpTupleIt, "localPort", uint16_t, rtcpPort);
 
     RtspHeaderLines lines;
-    std::string value = request.header.GetArg("Transport") + std::string(";");
+    std::string value = request.header.GetHeaderValue("Transport") + std::string(";");
     value += std::string("source=") + request.header.GetHost() + std::string(";");
     value += std::string("server_port=") + std::to_string(port) + std::string("-") + std::to_string(rtcpPort) + std::string(";");
     value += std::string("ssrc=") + std::to_string(track.ssrc);
@@ -139,18 +139,6 @@ int RtspServer::OnRecvOptions(RtspRemoteRequest &request)
 
     RtspHeaderLines lines;
     lines.SetHeaderValue("Public", options);
-    auto ctx = this->GetContext(request);
-
-    if (!ctx) {
-        ctx = this->CreateContext(request, nullptr);
-        if (ctx == nullptr) {
-            request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
-            PMS_ERROR("StreamId[{}] create ctx failed", ctx->streamId);
-            return -1;
-        }
-    }
-
-    ctx->stage = Stage::OPTIONS;
 
     request.Accept(lines);
 
@@ -179,25 +167,35 @@ int RtspServer::OnRecvGetParameter(RtspRemoteRequest &request)
 
 int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
 {
-    auto ctx = this->GetContext(request);
-
-    if (!ctx || ctx->stage != Stage::OPTIONS) {
-        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
-        PMS_ERROR("Invalid Rtsp request.");
-        return -1;
-    }
+    // if (!ctx || ctx->stage != Stage::OPTIONS) {
+    //     request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+    //     PMS_ERROR("Invalid Rtsp request.");
+    //     return -1;
+    // }
 
     std::string uri = request.header.GetUri();
     if (uri.empty()) {
         request.Error(RTSP_REPLY_CODE_NOT_FOUND);
+        PMS_ERROR("Invalid rtsp url, {}", request.header.GetUrl());
 
         return -1;
     }
 
     std::vector<std::string> strVec;
     RtspHeaderLines::SplitString(uri, '/', strVec);
-
     std::string streamId = strVec[strVec.size() - 1];
+
+    auto ctx = this->GetContext(request);
+
+    if (!ctx) {
+        auto s = this->rtcMaster->CreateSession(streamId, pingos::RtcSession::Role::RTSP_PLAYER);
+        ctx = this->CreateContext(request.connection, s);
+        if (ctx == nullptr) {
+            request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+            PMS_ERROR("StreamId[{}] create ctx failed", ctx->streamId);
+            return -1;
+        }
+    }
 
     RtcSession *publisher = this->rtcMaster->FindPublisher(streamId);
     if (publisher == nullptr) {
@@ -205,7 +203,7 @@ int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
         return -1;
     }
 
-    std::string sdp = this->GenerateSdp(request, publisher);
+    std::string sdp = this->GenerateSdp(ctx, publisher->GetProducerParameters());
     if (sdp.empty()) {
         PMS_ERROR("StreamId[{}] Invalid sdp", streamId);
         request.Error(RTSP_REPLY_CODE_INTERNAL_SERVER_ERROR);
@@ -254,7 +252,13 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
 
     auto &track = it->second;
 
-    std::string transportLine = request.header.GetArg("transport");
+    std::string transportLine = request.header.GetHeaderValue("transport");
+    if (transportLine.empty()) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("StreamId[{}] SessionId[{}] Invalid Rtsp request, missing transport line.",
+            ctx->streamId, ctx->sessionId, trackId);
+        return -1;
+    }
     std::string clientPorts = RtspHeaderLines::GetSplitValue(transportLine, ';', "client_port");
 
     std::vector<std::string> strVec;
@@ -277,8 +281,10 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
     pingos::PlainTransportConstructor plainTransportParameters;
     plainTransportParameters.announcedIp = Configuration::webrtc.announcedIp;
     plainTransportParameters.listenIp = Configuration::webrtc.listenIp;
+    plainTransportParameters.comedia = true;
     plainTransportParameters.rtcpMux = false;
     plainTransportParameters.srtpCryptoSuite = false;
+    plainTransportParameters.trackId = track.id;
 
     ctx->s->CreatePlainTransport(plainTransportParameters);
 
@@ -306,6 +312,29 @@ int RtspServer::OnRecvPlay(RtspRemoteRequest &request)
     lines.SetHeaderValue("Session", ctx->sessionId);
 
     request.Accept(lines);
+
+    auto *publisher = this->rtcMaster->FindPublisher(ctx->streamId);
+    if (publisher == nullptr) {
+        PMS_ERROR("StreamId[{}] Publisher not found", ctx->streamId);
+
+        MS_THROW_ERROR("Publisher not found");
+
+        return -1;
+    }
+
+    std::vector<pingos::ConsumerParameters> consumerParameters;
+    auto &parameters = publisher->GetProducerParameters();
+    for (auto parameter : parameters) {
+        ConsumerParameters consumerParameter;
+        parameter.GenerateConsumer(consumerParameter);
+        consumerParameters.push_back(consumerParameter);
+    }
+
+    ctx->s->SetProducerParameters(*publisher);
+    ctx->s->SetConsumerParameters(consumerParameters);
+    for (auto it : ctx->tracks) {
+        ctx->s->TrackPlay(it.second.kind, it.second.id);
+    }
 
     return 0;
 }
@@ -362,27 +391,21 @@ RtspServer::Context* RtspServer::GetContext(RtcSession *rtcSession)
     return (RtspServer::Context*) rtcSession->GetContext();
 }
 
-RtspServer::Context* RtspServer::CreateContext(RtspRemoteRequest &request, RtcSession *rtcSession)
+RtspServer::Context* RtspServer::CreateContext(TcpConnection *c, RtcSession *s)
 {
     Context *ctx = new Context();
-    ctx->c = request.connection;
-    ctx->c->SetContext(ctx);
 
-    std::string uri = request.header.GetUri();
-    if (uri.empty()) {
-        PMS_ERROR("Invalid rtsp url, {}", request.header.GetUrl());
-        return nullptr;
+    if (c) {
+        ctx->c = c;
+        c->SetContext(ctx);
     }
 
-    std::vector<std::string> strVec;
-    RtspHeaderLines::SplitString(uri, '/', strVec);
-
-    ctx->streamId = strVec[strVec.size() - 1];
-
-    if (rtcSession) {
-        ctx->s = rtcSession;
-        ctx->s->SetContext(ctx);
-        ctx->sessionId = rtcSession->GetSessionId();
+    if (s) {
+        ctx->s = s;
+        s->SetContext(ctx);
+        ctx->sessionId = s->GetSessionId();
+        ctx->streamId = s->GetStreamId();
+        s->AddListener(this);
     }
 
     return ctx;
@@ -418,11 +441,8 @@ void RtspServer::CloseSession(RtcSession *session)
     session->Close();
 }
 
-std::string RtspServer::GenerateSdp(RtspRemoteRequest &request, RtcSession *rtcSession)
+std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos::ProducerParameters> &parameters)
 {
-    RtspServer::Context *ctx = this->GetContext(rtcSession);
-    auto &parameters = rtcSession->GetProducerParameters();
-
     json jsonSdp = json::object();
     json jsonMedias = json::array();
 

@@ -15,10 +15,11 @@ public:
     int FillJson(json &jsonData);
 
 public:
+    uint16_t trackId { 0 };
     std::string listenIp { "" };
     std::string announcedIp { "" };
     bool comedia { true };
-    bool rtcpMux { true };
+    bool rtcpMux { false };
     bool enableSrtp { false };
     std::string srtpCryptoSuite = { "" };
 };

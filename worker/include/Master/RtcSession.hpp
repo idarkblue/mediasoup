@@ -89,7 +89,6 @@ public:
 public:
     int Publish(std::string sdp);
     int Play(std::string sdp);
-    int PlainPlay();
 
     int Pause(std::string kind);
     int Resume(std::string kind);
@@ -99,8 +98,8 @@ public:
 public:
     int SetConsumerParameters(std::vector<ConsumerParameters> &consumerParameters);
     int CreatePlainTransport(PlainTransportConstructor &plainTransportParameters);
-    int ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort);
-    int Play(bool hasAudio, bool hasVideo, bool hasData = false);
+    int ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort, uint16_t trackId);
+    int TrackPlay(std::string kind, uint16_t trackId);
 
 public:
     void AddLocalAddress(std::string ip, std::string announcedIp);
@@ -110,10 +109,9 @@ public:
 
 protected:
     int GenerateRouterRequest(std::string method, ChannelRequest &request);
-    int GeneratePlainTransportRequest(std::string method, ChannelRequest &request);
     int GenerateWebRtcTransportRequest(std::string method, ChannelRequest &request);
     int GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request);
-    int GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request);
+    int GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request, std::string trackId = "");
 
 private:
     int ActiveRtcSessionRequest(ChannelRequest &request);

@@ -75,12 +75,12 @@ private:
 protected:
     RtspServer::Context* GetContext(RtspRemoteRequest &request);
     RtspServer::Context* GetContext(RtcSession *rtcSession);
-    RtspServer::Context* CreateContext(RtspRemoteRequest &request, RtcSession *rtcSession);
+    RtspServer::Context* CreateContext(TcpConnection *c, RtcSession *s);
     void DeleteContext(RtspServer::Context *ctx);
     void CloseSession(RtcSession *session);
 
 protected:
-    std::string GenerateSdp(RtspRemoteRequest &request, RtcSession *rtcSession);
+    std::string GenerateSdp(RtspServer::Context *ctx, std::vector<pingos::ProducerParameters> &parameters);
 
 private:
     RtcMaster *rtcMaster;

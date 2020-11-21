@@ -477,7 +477,7 @@ int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportPa
 
     json jsonInternal;
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId;
+    jsonInternal["transportId"] = this->transportId + std::string("-") + std::to_string(plainTransportParameters.trackId);
 
     request.SetInternal(jsonInternal);
 
@@ -494,14 +494,14 @@ int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportPa
     return 0;
 }
 
-int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort)
+int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort, uint16_t trackId)
 {
     ChannelRequest request;
     request.Init("transport.connect");
 
     json jsonInternal;
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId;
+    jsonInternal["transportId"] = this->transportId + std::string("-") + std::to_string(trackId);
 
     json jsonData;
     jsonData["ip"] = ip;
@@ -519,25 +519,17 @@ int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rt
     return 0;
 }
 
-int RtcSession::Play(bool hasAudio, bool hasVideo, bool hasData)
+int RtcSession::TrackPlay(std::string kind, uint16_t trackId)
 {
     ChannelRequest request;
 
-    if (ActiveRtcSessionRequest(request) != 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run webrtctransport request error",
-            this->sessionId, this->streamId);
-        return -1;
-    }
-
     for (auto &consumer : this->consumerParameters) {
-        if ((consumer.kind == "audio" && !hasAudio) ||
-            (consumer.kind == "video" && !hasVideo) ||
-            (consumer.kind == "data" && !hasData))
+        if (consumer.kind != kind)
         {
             continue;
         }
 
-        if (GenerateConsumerRequest("transport.consume", consumer.kind, request) != 0) {
+        if (GenerateConsumerRequest("transport.consume", consumer.kind, request, std::to_string(trackId)) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate consumer[{}] request error",
                 this->sessionId, this->streamId, consumer.kind);
             return -1;
@@ -612,19 +604,6 @@ int RtcSession::GenerateRouterRequest(std::string method, ChannelRequest &reques
 
     request.SetInternal(jsonInternal);
     request.SetData(jsonData);
-
-    return 0;
-}
-
-int RtcSession::GeneratePlainTransportRequest(std::string method, ChannelRequest &request)
-{
-    request.Init(method);
-
-    if (Channel::Request::string2MethodId.count(method) == 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] Invalid method, unknown method {}",
-            this->sessionId, this->streamId, method);
-        return -1;
-    }
 
     return 0;
 }
@@ -726,7 +705,7 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Ch
     return 0;
 }
 
-int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request)
+int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request, std::string trackId)
 {
     request.Init(method);
 
@@ -754,7 +733,11 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Ch
     json jsonData = json::object();
 
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId;
+    if (trackId.empty()) {
+        jsonInternal["transportId"] = this->transportId;
+    } else {
+        jsonInternal["transportId"] = this->transportId + std::string("-") + trackId;
+    }
     jsonInternal["consumerId"] = consumerId;
     jsonInternal["producerId"] = producerId;
 

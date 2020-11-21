@@ -121,7 +121,7 @@ std::string RtspHeaderLines::GetSplitValue(std::string str, char sp, std::string
 
     for (auto &item : strVec) {
         std::vector<std::string> kv;
-        RtspHeaderLines::SplitString(str, sp, kv);
+        RtspHeaderLines::SplitString(item, '=', kv);
         if (kv.size() != 2 || strcasecmp(kv[0].c_str(), key.c_str())) {
             continue;
         }
