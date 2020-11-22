@@ -32,7 +32,7 @@ struct Context {
 
 public:
     RtcServer() = default;
-    RtcServer(NetServer *netServer, RtcMaster *rtcMaster);
+    RtcServer(RtcMaster *rtcMaster);
     virtual ~RtcServer();
 
     int SetMaster(RtcMaster *rtcMaster);

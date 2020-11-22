@@ -58,6 +58,14 @@ struct MasterConfiguration {
     std::string workerName = { "" };
 };
 
+struct RecordConfiguration {
+    std::string targetHost;
+    uint16_t targetPort;
+    std::string recordPath;
+    std::string execRecordDone;
+    uint16_t cmdPort;
+};
+
 class Configuration
 {
 public:
@@ -74,9 +82,10 @@ public:
     static RtspConfiguration rtsp;
     static MasterConfiguration master;
     static WebRtcConfiguration webrtc;
+    static RecordConfiguration record;
 
 private:
-    static std::string m_path;
+    static std::string filePath;
 };
 
 } // namespace

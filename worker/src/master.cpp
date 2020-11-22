@@ -14,37 +14,12 @@ extern "C" {
 #include "Master/Configuration.hpp"
 #include "Master/sdptransform.hpp"
 #include "Master/Rtsp/RtspServer.hpp"
+#include "Master/Record/RecordServer.hpp"
 
 #define PMS_LOG_FILE "./logs/pms.log"
 
-static std::string sdp = R"(
-v=0
-o=OnewaveUServerNG 1451516402 1025358037 IN IP4 192.168.20.136  
-s=/xxx666  
-u=http:///  
-e=admin@  
-c=IN IP4 0.0.0.0  
-t=0 0  
-a=isma-compliance:1,1.0,1  
-
-a=range:npt=0-  
-m=video 0 RTP/AVP 96
-a=rtpmap:96 MP4V-ES/90000  
-a=fmtp:96 profile-level-id=245;config=000001B0F5000001B509000001000000012000C888B0E0E0FA62D089028307
-a=control:trackID=0
-)";
-
-void TestSdp()
-{
-    json jsonSdp = sdptransform::parse(sdp);
-    std::cout << jsonSdp.dump() << std::endl;
-}
-
 int main(int argc, char **argv)
 {
-    TestSdp();
-
-//    return 0;
     if (argc != 2) {
         printf("Configuration file must be specified.\r\n");
         return 0;
@@ -137,6 +112,17 @@ int main(int argc, char **argv)
 
     ws.SetListener(&rtcServer);
     http.SetListener(&rtcServer);
+
+    pingos::HttpServer recordHttp;
+
+    if (pingos::Configuration::record.cmdPort) {
+        if (recordHttp.Accept("0.0.0.0", pingos::Configuration::record.cmdPort, "/") != 0) {
+            return -1;
+        }
+    }
+
+    pingos::RecordServer record(pingos::Loop::FetchLoop());
+    recordHttp.SetListener(&record);
 
     pingos::Loop::Run();
 

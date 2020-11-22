@@ -14,7 +14,7 @@
 
 namespace pingos {
 
-RtcServer::RtcServer(NetServer *netServer, RtcMaster *rtcMaster)
+RtcServer::RtcServer(RtcMaster *rtcMaster)
 {
     this->SetMaster(rtcMaster);
 }

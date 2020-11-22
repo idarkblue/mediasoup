@@ -19,7 +19,9 @@ HttpConfiguration Configuration::http;
 RtspConfiguration Configuration::rtsp;
 MasterConfiguration Configuration::master;
 WebRtcConfiguration Configuration::webrtc;
-std::string Configuration::m_path;
+RecordConfiguration Configuration::record;
+
+std::string Configuration::filePath;
 
 Configuration::Configuration()
 {
@@ -33,12 +35,12 @@ Configuration::~Configuration()
 
 void Configuration::ClassInit(std::string path)
 {
-    m_path = path;
+    filePath = path;
 }
 
 int Configuration::Load()
 {
-    std::string path = m_path;
+    std::string path = filePath;
     std::ifstream in(path, std::ios::binary);
 
     if (!in.is_open()){
@@ -137,6 +139,25 @@ int Configuration::Load()
         }
 
         JSON_READ_VALUE_DEFAULT(*jsonMasterIt, "workerName", std::string, master.workerName, "mediasoup-worker");
+
+        auto jsonRecordIt = jsonObject.find("record");
+        if (jsonRecordIt != jsonObject.end()) {
+            JSON_READ_VALUE_DEFAULT(*jsonRecordIt, "targetHost", std::string, record.targetHost, "127.0.0.1");
+            JSON_READ_VALUE_DEFAULT(*jsonRecordIt, "targetPort", uint16_t, record.targetPort, rtsp.port);
+            JSON_READ_VALUE_DEFAULT(*jsonRecordIt, "recordPath", std::string, record.recordPath, "./record/");
+            JSON_READ_VALUE_DEFAULT(*jsonRecordIt, "execRecordDone", std::string, record.execRecordDone, "");
+            JSON_READ_VALUE_DEFAULT(*jsonRecordIt, "cmdPort", uint16_t, record.cmdPort, 8888);
+        } else {
+            record.targetHost = "127.0.0.1";
+            record.targetPort = rtsp.port;
+            record.recordPath = "./record/";
+            record.execRecordDone = "";
+            record.cmdPort = 8888;
+        }
+
+        if (record.recordPath.empty() || record.recordPath.at(record.recordPath.length() - 1) != '/') {
+            record.recordPath += "/";
+        }
 
     } catch (const json::parse_error &error) {
         printf("Invalid configuration file, Parse Setting file[%s] failed, reason %s.",

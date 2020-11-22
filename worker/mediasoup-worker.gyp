@@ -338,6 +338,8 @@
       'sources':
       [
         # C++ source files.
+        'src/Master/Record/RecordRequest.cpp',
+        'src/Master/Record/RecordServer.cpp',
         'src/Master/Rtsp/RtspHeader.cpp',
         'src/Master/Rtsp/RtspRequest.cpp',
         'src/Master/Rtsp/RtspServer.cpp',

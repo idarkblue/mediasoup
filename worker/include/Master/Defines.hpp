@@ -21,7 +21,7 @@ using json = nlohmann::json;
 
 #define JSON_READ_VALUE_DEFAULT(_json_object_, _key_, _type_, _val_, _default_) \
     if ((_json_object_).find(_key_) == (_json_object_).end()) {                 \
-        _val_ = _default_;                                                      \
+        _val_ = (_default_);                                                      \
     } else {                                                                    \
         _val_ = (_json_object_)[_key_].get<_type_>();                           \
     }
