@@ -103,13 +103,14 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
     JSON_READ_VALUE_THROW(*jsonRtcpTupleIt, "localPort", uint16_t, rtcpPort);
 
     RtspHeaderLines lines;
-    std::string value = request.header.GetHeaderValue("Transport") + std::string(";");
+    std::string value = std::string("RTP/AVP/UDP;unicast;client_port=") + std::to_string(track.remotePort) + std::string("-") + std::to_string(track.remoteRtcpPort) + std::string(";");
     value += std::string("source=") + request.header.GetHost() + std::string(";");
     value += std::string("server_port=") + std::to_string(port) + std::string("-") + std::to_string(rtcpPort) + std::string(";");
     value += std::string("ssrc=") + std::to_string(track.ssrc);
     lines.SetHeaderValue("Transport", value);
     request.Accept(lines);
 
+    ctx->setupRequests.clear();
     PMS_INFO("SessionId[{}] StreamId[{}] Ack[{}] error[{}] reason[{}] data[{}]",
         sessionId, streamId, ack, error, reason, jsonObject["data"].dump());
 }
@@ -216,7 +217,8 @@ int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
     lines.SetHeaderValue("Last-Modified", date);
     lines.SetHeaderValue("Expires", date);
     lines.SetHeaderValue("Date", date);
-    lines.SetHeaderValue("Session", "40;timeout=20");
+    std::string value = ctx->sessionId + std::string(";timeout=20");
+    lines.SetHeaderValue("Session", value);
     lines.SetHeaderValue("Content-Type", "application/sdp");
     lines.SetHeaderValue("Content-Base", request.header.GetUrl());
 
@@ -355,25 +357,33 @@ void RtspServer::OnTcpConnectionPacketReceived(pingos::TcpConnection* connection
 {
     RtspRequestHeader header(headerLines);
 
-    RtspRemoteRequest request(connection, header, body);
+    RtspRemoteRequest request;
+    try {
 
-    std::string method = header.GetMethod();
+        request = RtspRemoteRequest(connection, header, body);
 
-    if (method == "options") {
-        this->OnRecvOptions(request);
-    } else if (method == "get_parameter") {
-        this->OnRecvGetParameter(request);
-    } else if (method == "describe") {
-        this->OnRecvDescribe(request);
-    } else if (method == "setup") {
-        this->OnRecvSetup(request);
-    } else if (method == "play") {
-        this->OnRecvPlay(request);
-    } else if (method == "teardown") {
-        this->OnRecvTeardown(request);
-    } else {
-        request.Error(RtspReplyCode::RTSP_REPLY_CODE_OPTION_NOT_SUPPORTED);
-        return;
+        std::string method = header.GetMethod();
+
+        if (method == "options") {
+            this->OnRecvOptions(request);
+        } else if (method == "get_parameter") {
+            this->OnRecvGetParameter(request);
+        } else if (method == "describe") {
+            this->OnRecvDescribe(request);
+        } else if (method == "setup") {
+            this->OnRecvSetup(request);
+        } else if (method == "play") {
+            this->OnRecvPlay(request);
+        } else if (method == "teardown") {
+            this->OnRecvTeardown(request);
+        } else {
+            request.Error(RtspReplyCode::RTSP_REPLY_CODE_OPTION_NOT_SUPPORTED);
+            return;
+        }
+    } catch (MediaSoupError &error) {
+        PMS_ERROR("Invalid rtsp request, reason {}", error.what());
+        connection->Close();
+        //request.Error(RtspReplyCode::RTSP_REPLY_CODE_OPTION_NOT_SUPPORTED);
     }
 }
 

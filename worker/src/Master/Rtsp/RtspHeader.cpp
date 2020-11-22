@@ -286,12 +286,10 @@ std::string RtspRequestHeader::GetHost()
         host.substr(0, pos);
     }
 
-    host.find(':');
+    pos = host.find(':');
     if (pos != std::string::npos) {
-        host.substr(0, pos);
+        host = host.substr(0, pos);
     }
-
-    host = host.substr(0, pos);
 
     return host;
 }
