@@ -348,3 +348,25 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
     "data":{ }
 }
 ```
+
+# 3. 录制
+
+## 开始录制
+```json
+{
+    "stream": "123456",
+    "method":"record.start",
+    "data": {
+        "fileName": "123456.webm"
+    }
+}
+```
+
+## 停止录制
+```json
+{
+    "stream": "123456",
+    "method":"record.stop",
+    "data": {}
+}
+```
