@@ -40,6 +40,19 @@ make && make master
         "maxPort": 30000,
         "dtlsCertificateFile": "./certs/full_chain.pem",
         "dtlsPrivateKeyFile": "./certs/privkey.pem"
+    },
+
+    "rtsp": {
+        "port": 8554,
+        "listenIp": "0.0.0.0"
+    },
+
+    "record": {
+        "targetHost": "127.0.0.1",
+        "targetPort": 8554,
+        "recordPath": "./record/",
+        "execRecordDone": "",
+        "cmdPort": 8888
     }
 }
 
@@ -74,6 +87,17 @@ make && make master
     - maxPort：udp端口范围的最大值
     - dtlsCertificateFile: 证书文件
     - dtlsPrivateKeyFile：证书私钥
+
+- rtsp
+    - port：rtsp服务器端口
+    - listenIp：监听IP
+
+- record
+    - targetHost: 需要被录制的服务器ip，如果想对本服务器录制 则设置为：127.0.0.1
+    - targetPort: 需要被录制的服务器rtsp端口
+    - recordPath: 录制文件存储目录
+    - execRecordDone: 录制文件生成后如果还需要做后续的处理则在此处填写shell命令
+    - cmdPort: 录制控制端口
 
 3. 启动
 
@@ -357,7 +381,7 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
     "stream": "123456",
     "method":"record.start",
     "data": {
-        "fileName": "123456.webm"
+        "fileName": "123456-20201123-231523.webm"
     }
 }
 ```
