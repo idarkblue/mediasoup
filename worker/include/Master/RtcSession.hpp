@@ -89,10 +89,8 @@ public:
 public:
     int Publish(std::string sdp);
     int Play(std::string sdp);
-
     int Pause(std::string kind);
     int Resume(std::string kind);
-
     int Close();
 
 public:
@@ -106,6 +104,9 @@ public:
     int SetProducerParameters(RtcSession &rtcSession);
     void SetContext(void *ctx);
     void* GetContext();
+
+protected:
+    int CloseTransport(std::string transportId);
 
 protected:
     int GenerateRouterRequest(std::string method, ChannelRequest &request);
@@ -129,7 +130,6 @@ private:
     std::string sessionId { "" };
     std::string streamId { "" };
     std::string routerId { "" };
-    std::string transportId { "" };
     std::string videoProducerId { "" };
     std::string audioProducerId { "" };
     std::string dataProducerId { "" };
@@ -140,6 +140,7 @@ private:
     WebRtcTransportParameters rtcTransportParameters;
     std::vector<ProducerParameters> producerParameters;
     std::vector<ConsumerParameters> consumerParameters;
+    std::vector<std::string> transportIds;
 
     json jsonIceParameters;
     json jsonIceCandidateParameters;

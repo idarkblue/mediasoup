@@ -131,10 +131,15 @@ int RecordServer::StopRecord(RecordRequest &request)
         request.Error("job not found");
         return -1;
     }
-
     auto ctx = this->jobMap[streamId];
-    uv_process_kill(&ctx->process, SIGINT);
     this->jobMap.erase(streamId);
+
+    if (!ctx || ctx->recordDone) {
+        PMS_ERROR("StreamId[{}] job not running.", streamId);
+        return 0;
+    }
+
+    uv_process_kill(&ctx->process, SIGINT);
 
     PMS_INFO("StreamId[{}] close job process.", streamId);
     request.Accept();

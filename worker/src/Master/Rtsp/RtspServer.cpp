@@ -133,7 +133,6 @@ void RtspServer::OnRtspTcpConnectionClosed(
     return;
 }
 
-
 int RtspServer::OnRecvOptions(RtspRemoteRequest &request)
 {
     std::string options = "OPTIONS, ANNOUNCE, DESCRIBE, SETUP, TEARDOWN, PLAY, RECORD, PAUSE";
@@ -148,14 +147,6 @@ int RtspServer::OnRecvOptions(RtspRemoteRequest &request)
 
 int RtspServer::OnRecvGetParameter(RtspRemoteRequest &request)
 {
-    auto ctx = this->GetContext(request);
-
-    if (!ctx || ctx->stage != Stage::STREAM) {
-        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
-        PMS_ERROR("Invalid Rtsp request.");
-        return -1;
-    }
-
     std::string options = "OPTIONS, ANNOUNCE, DESCRIBE, SETUP, TEARDOWN, PLAY, RECORD, PAUSE";
 
     RtspHeaderLines lines;
@@ -168,12 +159,6 @@ int RtspServer::OnRecvGetParameter(RtspRemoteRequest &request)
 
 int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
 {
-    // if (!ctx || ctx->stage != Stage::OPTIONS) {
-    //     request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
-    //     PMS_ERROR("Invalid Rtsp request.");
-    //     return -1;
-    // }
-
     std::string uri = request.header.GetUri();
     if (uri.empty()) {
         request.Error(RTSP_REPLY_CODE_NOT_FOUND);
@@ -232,8 +217,13 @@ int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
 int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
 {
     auto ctx = this->GetContext(request);
+    if (!ctx) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("Invalid Rtsp request, rtsp context is nullptr.");
+        return -1;
+    }
 
-    if (!ctx || (ctx->stage != Stage::DESCRIBE && ctx->stage != Stage::SETUP)) {
+    if (ctx->stage < Stage::DESCRIBE) {
         request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
         PMS_ERROR("StreamId[{}] SessionId[{}] Invalid Rtsp request, describe needed.",
             ctx->streamId, ctx->sessionId);
@@ -292,13 +282,26 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
 
     ctx->setupRequests.push_back(request);
 
+    ctx->stage = Stage::SETUP;
+
     return 0;
 }
 
 int RtspServer::OnRecvPlay(RtspRemoteRequest &request)
 {
-    RtspHeaderLines lines;
     auto ctx = this->GetContext(request);
+    if (!ctx) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("Invalid Rtsp request, rtsp context is nullptr.");
+        return -1;
+    }
+
+    if (ctx->stage < Stage::SETUP) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("StreamId[{}] SessionId[{}] Invalid Rtsp request, describe needed.",
+            ctx->streamId, ctx->sessionId);
+        return -1;
+    }
 
     std::string value = std::string("url=");
     for (auto kv : ctx->tracks) {
@@ -309,6 +312,8 @@ int RtspServer::OnRecvPlay(RtspRemoteRequest &request)
     if (value.at(value.length() - 1) == ';') {
         value.substr(0, value.length() - 1);
     }
+
+    RtspHeaderLines lines;
 
     lines.SetHeaderValue("RTP-Info", value);
     lines.SetHeaderValue("Session", ctx->sessionId);
@@ -708,3 +713,4 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
 }
 
 }
+

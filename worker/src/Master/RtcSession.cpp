@@ -68,18 +68,14 @@ RtcSession::Role RtcSession::String2Role(std::string role)
 RtcSession::RtcSession(Role role, std::string sessionId, std::string stream):
     role(role), sessionId(sessionId), streamId(stream)
 {
-    static uint64_t guid = 0;
     this->routerId = "pingos";
-    this->transportId = sessionId + std::string("-")
-        + Role2String(role) + std::string("-")
-        + stream + std::string("-") + std::to_string(guid);
 
     if (role == Role::PUBLISHER) {
-        this->videoProducerId = this->transportId + std::string("-") + std::string("video");
-        this->audioProducerId = this->transportId + std::string("-") + std::string("audio");
+        this->videoProducerId = this->sessionId + std::string("-") + std::string("video");
+        this->audioProducerId = this->sessionId + std::string("-") + std::string("audio");
     } else {
-        this->videoConsumerId = this->transportId + std::string("-") + std::string("video");
-        this->audioConsumerId = this->transportId + std::string("-") + std::string("audio");
+        this->videoConsumerId = this->sessionId + std::string("-") + std::string("video");
+        this->audioConsumerId = this->sessionId + std::string("-") + std::string("audio");
     }
 }
 
@@ -120,7 +116,7 @@ std::string RtcSession::GetStreamId()
 
 std::string RtcSession::GetTransportId()
 {
-    return this->transportId;
+    return this->sessionId;
 }
 
 std::string RtcSession::GetProducerId(std::string kind)
@@ -265,6 +261,8 @@ int RtcSession::Publish(std::string sdp)
         return -1;
     }
 
+    this->transportIds.push_back(sessionId);
+
     if (GenerateWebRtcTransportRequest("transport.connect", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, transport connect request error",
             this->sessionId, this->streamId);
@@ -345,6 +343,8 @@ int RtcSession::Play(std::string sdp)
             this->sessionId, this->streamId);
         return -1;
     }
+
+    this->transportIds.push_back(sessionId);
 
     if (ActiveRtcSessionRequest(request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run webrtctransport request error",
@@ -434,28 +434,23 @@ int RtcSession::Resume(std::string kind)
 
 int RtcSession::Close()
 {
+    PMS_INFO("SessionId[{}] StreamId[{}] closing session",
+            this->sessionId, this->streamId);
+
     if (this->status == Status::CLOSED) {
         PMS_WARN("SessionId[{}] StreamId[{}] the session has been closed",
             this->sessionId, this->streamId);
         return 0;
     }
 
-    if (this->role != Role::PUBLISHER && this->role != Role::PLAYER) {
+    if (this->transportIds.empty()) {
+        PMS_WARN("SessionId[{}] StreamId[{}] the session has no transport",
+            this->sessionId, this->streamId);
         return 0;
     }
 
-    ChannelRequest request;
-
-    if (GenerateWebRtcTransportRequest("transport.close", request) != 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] close failed, GenerateWebRtcTransportRequest error",
-            this->sessionId, this->streamId);
-        return -1;
-    }
-
-    if (ActiveRtcSessionRequest(request) != 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] close failed, run request error",
-            this->sessionId, this->streamId);
-        return -1;
+    for (auto &transportId : this->transportIds) {
+        this->CloseTransport(transportId);
     }
 
     this->status = Status::CLOSED;
@@ -476,8 +471,10 @@ int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportPa
     request.Init("router.createPlainTransport");
 
     json jsonInternal;
+    std::string realTransportId = this->sessionId + std::string("-") + std::to_string(plainTransportParameters.trackId);
+
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId + std::string("-") + std::to_string(plainTransportParameters.trackId);
+    jsonInternal["transportId"] = realTransportId;
 
     request.SetInternal(jsonInternal);
 
@@ -491,6 +488,8 @@ int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportPa
         return -1;
     }
 
+    this->transportIds.push_back(realTransportId);
+
     return 0;
 }
 
@@ -501,7 +500,7 @@ int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rt
 
     json jsonInternal;
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId + std::string("-") + std::to_string(trackId);
+    jsonInternal["transportId"] = this->sessionId + std::string("-") + std::to_string(trackId);
 
     json jsonData;
     jsonData["ip"] = ip;
@@ -621,7 +620,7 @@ int RtcSession::GenerateWebRtcTransportRequest(std::string method, ChannelReques
     json jsonData = json::object();
 
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId;
+    jsonInternal["transportId"] = this->sessionId;
 
     switch (Channel::Request::string2MethodId[method]) {
         case Channel::Request::MethodId::ROUTER_CREATE_WEBRTC_TRANSPORT:
@@ -673,7 +672,7 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Ch
     json jsonData = json::object();
 
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->transportId;
+    jsonInternal["transportId"] = this->sessionId;
     jsonInternal["producerId"] = producerId;
 
     switch (Channel::Request::string2MethodId[method]) {
@@ -734,9 +733,9 @@ int RtcSession::GenerateConsumerRequest(std::string method, std::string kind, Ch
 
     jsonInternal["routerId"] = this->routerId;
     if (trackId.empty()) {
-        jsonInternal["transportId"] = this->transportId;
+        jsonInternal["transportId"] = this->sessionId;
     } else {
-        jsonInternal["transportId"] = this->transportId + std::string("-") + trackId;
+        jsonInternal["transportId"] = this->sessionId + std::string("-") + trackId;
     }
     jsonInternal["consumerId"] = consumerId;
     jsonInternal["producerId"] = producerId;
@@ -1368,6 +1367,31 @@ void RtcSession::FireEvent(std::string event, json& data)
             listener->OnRtcSessionEvent(this, jsonRoot);
         }
     }
+}
+
+int RtcSession::CloseTransport(std::string transportId)
+{
+    PMS_INFO("SessionId[{}] StreamId[{}] closing transport[{}]",
+            this->sessionId, this->streamId, transportId);
+
+    ChannelRequest request("transport.close");
+
+    json jsonInternal = json::object();
+    json jsonData = json::object();
+
+    jsonInternal["routerId"] = this->routerId;
+    jsonInternal["transportId"] = transportId;
+
+    request.SetInternal(jsonInternal);
+    request.SetData(jsonData);
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] close failed, run request error",
+            this->sessionId, this->streamId);
+        return -1;
+    }
+
+    return 0;
 }
 
 }
