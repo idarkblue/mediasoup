@@ -560,7 +560,8 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
 
         // sdp: media: ssrcs
 
-        if (producer.direction.find("recv") != std::string::npos) {
+        //if (producer.direction.find("recv") != std::string::npos)
+        {
 
             json jsonSsrcs = json::array();
             json jsonGroups = json::array();
@@ -632,6 +633,7 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
                 jsonGroup["semantics"] = "FID";
                 jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
                 jsonGroups.push_back(jsonGroup);
+                break;
             }
 
             jsonMedia["ssrcs"] = jsonSsrcs;
@@ -641,9 +643,6 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
             // sdp: media: direction
             jsonMedia["direction"] = "sendrecv";
 
-        } else {
-            // sdp: media: direction
-            jsonMedia["direction"] = "recvonly";
         }
 
         jsonMedia["direction"] = "sendonly";
