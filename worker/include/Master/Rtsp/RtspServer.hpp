@@ -10,8 +10,8 @@
 #include "Rtsp/RtspRequest.hpp"
 
 namespace pingos {
-class RtspServer : public pingos::TcpServer::Listener,
-                   public pingos::TcpConnection::Listener,
+class RtspServer : public TcpServer::Listener,
+                   public TcpConnection::Listener,
                    public RtcSession::Listener
 {
 public:
@@ -34,8 +34,8 @@ public:
     };
 
     struct Context {
-        pingos::TcpConnection *c { nullptr };
-        pingos::RtcSession *s { nullptr };
+        TcpConnection *c { nullptr };
+        RtcSession *s { nullptr };
         std::string sessionId { "" };
         std::string streamId { "" };
         std::map<uint16_t, Track> tracks;
@@ -66,11 +66,11 @@ protected:
 // Implement TcpServer::Listener
 protected:
     void OnRtspTcpConnectionClosed(
-        pingos::TcpServer* tcpServer, pingos::TcpConnection* connection) override;
+        TcpServer* tcpServer, TcpConnection* connection) override;
 
 // Implement TcpConnection::Listener
 private:
-    void OnTcpConnectionPacketReceived(pingos::TcpConnection* connection, RtspHeaderLines &headerLines, std::string body) override;
+    void OnTcpConnectionPacketReceived(TcpConnection* connection, RtspHeaderLines &headerLines, std::string body) override;
 
 protected:
     RtspServer::Context* GetContext(RtspRemoteRequest &request);
@@ -80,7 +80,7 @@ protected:
     void CloseSession(RtcSession *session);
 
 protected:
-    std::string GenerateSdp(RtspServer::Context *ctx, std::vector<pingos::ProducerParameters> &parameters);
+    std::string GenerateSdp(RtspServer::Context *ctx, std::vector<ProducerParameters> &parameters);
 
 private:
     RtcMaster *rtcMaster;

@@ -1,0 +1,18 @@
+[Unit]
+Description=Pingos WebRTC Service
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+LimitNOFILE=1000000
+LimitCORE=infinity
+KillMode=control-group
+WorkingDirectory=/usr/local/pms
+ExecStart=/usr/local/pms/bin/mediasoup-master /usr/local/pms/conf/pms.conf
+ExecStop=/bin/kill -SIGKILL $MAINPID
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=multi-user.target

@@ -76,7 +76,7 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location)
             auto nc = psd->nc;
             this->OnClose(nc, code, message);
         }
-    }).listen(ip, port, [this, ip, port](auto *token) {
+    }).listen(ip, port, LIBUS_LISTEN_EXCLUSIVE_PORT, [this, ip, port](auto *token) {
         this->listenSocket = token;
         if (token) {
             PMS_INFO("Listening ws port {}:{} success", ip, port);
@@ -140,7 +140,7 @@ int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::
             auto nc = psd->nc;
             this->OnClose(nc, code, message);
         }
-    }).listen(ip, port, [this, ip, port](auto *token) {
+    }).listen(ip, port, LIBUS_LISTEN_EXCLUSIVE_PORT, [this, ip, port](auto *token) {
         this->listenSocket = token;
         if (token) {
             PMS_INFO("Listening wss port {}:{} success", ip, port);

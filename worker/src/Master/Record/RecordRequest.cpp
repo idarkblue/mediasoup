@@ -57,7 +57,7 @@ int RecordRequest::Accept()
     jsonResponse["err_msg"] = "OK";
     jsonResponse["data"] = json::object();
 
-    if (this->nc->ReplyString(jsonResponse.dump()) != 0) {
+    if (nc && this->nc->ReplyString(jsonResponse.dump()) != 0) {
         PMS_ERROR("StreamId[{}] rtc reply failed", this->stream);
         return -1;
     }
@@ -78,7 +78,7 @@ int RecordRequest::Accept(json &jsonData)
     jsonResponse["err_msg"] = "OK";
     jsonResponse["data"] = jsonData;
 
-    if (this->nc->ReplyString(jsonResponse.dump()) != 0) {
+    if (nc && this->nc->ReplyString(jsonResponse.dump()) != 0) {
         PMS_ERROR("StreamId[{}] rtc reply failed", this->stream);
         return -1;
     }
@@ -104,7 +104,7 @@ int RecordRequest::Error(const char* reason)
     }
     jsonResponse["data"] = json::object();
 
-    if (this->nc->ReplyString(jsonResponse.dump()) != 0) {
+    if (nc && this->nc->ReplyString(jsonResponse.dump()) != 0) {
         PMS_ERROR("StreamId[{}] rtc reply failed", this->stream);
         return -1;
     }

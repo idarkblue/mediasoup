@@ -9,7 +9,7 @@ namespace pingos {
 
 RtcStream::RtcStream(std::string streamId)
 {
-
+    this->streamId = streamId;
 }
 
 RtcStream::~RtcStream()

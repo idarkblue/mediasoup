@@ -86,12 +86,20 @@ void RtspHeaderLines::SplitString(std::string str, char sp, std::vector<std::str
     do {
         size_t pos = str.find(sp);
         if (pos == std::string::npos) {
-            strVec.push_back(str.substr(0, pos));
+            auto item = str.substr(0, pos);
+            strVec.push_back(item);
             return;
+        } else if (pos > 0) {
+            auto item = str.substr(0, pos);
+            strVec.push_back(item);
         }
 
-        strVec.push_back(str.substr(0, pos));
-        str = str.substr(pos + 1);
+        if (pos + 1 == str.size()) {
+            str = "";
+        } else {
+            str = str.substr(pos + 1);
+        }
+
     } while (!str.empty());
 }
 
@@ -99,15 +107,20 @@ void RtspHeaderLines::SplitString(std::string str, std::string sp, std::vector<s
 {
     do {
         size_t pos = str.find(sp);
-        if (pos == std::string::npos && !str.empty()) {
-            strVec.push_back(str.substr(0, pos));
+        if (pos == std::string::npos) {
+            auto item = str.substr(0, pos);
+            strVec.push_back(item);
             return;
+        } else if (pos > 0) {
+            auto item = str.substr(0, pos);
+            strVec.push_back(item);
         }
 
-        if (pos > 0) {
-            strVec.push_back(str.substr(0, pos));
+        if (pos + 1 == str.size()) {
+            str = "";
+        } else {
+            str = str.substr(pos + 1);
         }
-        str = str.substr(pos + sp.length());
     } while (!str.empty());
 }
 
@@ -363,7 +376,13 @@ void RtspReplyHeader::SetResult(int code, std::string reason)
 
 int RtspReplyHeader::GetResultCode()
 {
-    return 0;
+    std::vector<std::string> strVec;
+    RtspHeaderLines::SplitString(this->cmdLine, " ", strVec);
+    if (strVec.size() != 3) {
+        return -1;
+    }
+
+    return std::stoi(strVec[1]);
 }
 
 }

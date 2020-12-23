@@ -12,32 +12,6 @@ namespace pingos {
 
 class RtcSession;
 class RtcWorker;
-/*
-class RtcEvent {
-public:
-    enum EventId {
-        ERROR,
-        TRANSPORT,
-        ICE,
-        DTLS,
-
-    };
-
-    static std::unordered_map<EventId, std::string> eventId2String;
-    static std::unordered_map<std::string, EventId> string2EventId;
-
-public:
-    RtcEvent(std::string sessionId, std::string streamId, EventId eventId);
-    virtual ~RtcEvent();
-
-public:
-    std::string sessionId;
-    std::string streamId;
-    std::string event;
-    EventId eventId;
-    json jsonData;
-};
-*/
 
 class RtcSession {
 
@@ -94,10 +68,12 @@ public:
     int Close();
 
 public:
+    int SetProducerParameters(std::vector<ProducerParameters> &producerParameters);
     int SetConsumerParameters(std::vector<ConsumerParameters> &consumerParameters);
     int CreatePlainTransport(PlainTransportConstructor &plainTransportParameters);
     int ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rtcpPort, uint16_t trackId);
     int TrackPlay(std::string kind, uint16_t trackId);
+    int TrackPublish(std::string kind, uint16_t trackId);
 
 public:
     void AddLocalAddress(std::string ip, std::string announcedIp);
@@ -111,7 +87,7 @@ protected:
 protected:
     int GenerateRouterRequest(std::string method, ChannelRequest &request);
     int GenerateWebRtcTransportRequest(std::string method, ChannelRequest &request);
-    int GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request);
+    int GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request, std::string trackId = "");
     int GenerateConsumerRequest(std::string method, std::string kind, ChannelRequest &request, std::string trackId = "");
 
 private:

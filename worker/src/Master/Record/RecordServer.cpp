@@ -35,14 +35,22 @@ RecordServer::~RecordServer()
 */
 int RecordServer::OnMessage(NetConnection *nc)
 {
-    std::string message;
-    nc->PopData(message);
-
-    json jsonRoot = json::parse(message);
+    json jsonRoot;
     std::string method;
     std::string stream;
+    std::string reason = "";
 
-    RecordRequest request;
+    RecordRequest request(nc);
+    try {
+        std::string message { "{}" };
+        nc->PopData(message);
+        jsonRoot = json::parse(message);
+    } catch (const json::parse_error &error) {
+        reason = error.what();
+        PMS_ERROR("JSON parsing error: {}, message {}", reason, nc->GetData());
+        goto _error;
+    }
+
     try {
         request = RecordRequest(nc, jsonRoot);
 
@@ -61,9 +69,14 @@ int RecordServer::OnMessage(NetConnection *nc)
 
     } catch (MediaSoupError &error) {
         PMS_ERROR("Record error, {}", error.what());
-        request.Error(error.what());
+        reason = error.what();
+        goto _error;
     }
-    
+
+    return 0;
+
+_error:
+    request.Error(reason.c_str());
 
     return 0;
 }

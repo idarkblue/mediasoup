@@ -6,13 +6,18 @@
 #include "Worker.hpp"
 #include "RtcRequest.hpp"
 #include "RtcMaster.hpp"
+#include "RtcSession.hpp"
+#include "Rtsp/RtspClient.hpp"
 #include "json.hpp"
 
 using json = nlohmann::json;
 
 namespace pingos {
 
-class RtcServer : public NetServer::Listener, public RtcSession::Listener {
+class RtcServer : public NetServer::Listener,
+                public RtcSession::Listener,
+                public RtspClient::Listener
+{
 public:
 struct Context {
     enum State {
@@ -54,6 +59,14 @@ protected:
     int MuteStream(RtcRequest *request);
     int CloseStream(RtcRequest *request);
     int Heartbeat(RtcRequest *request);
+    int Pull(RtcRequest *request);
+    void HoldPlayRequest(RtcRequest *request);
+    void ActivePlayRequest(std::string streamId);
+
+protected:
+    void OnRtspClientPlayCompleted(RtspClient *client) override;
+    void OnRtspClientPublishCompleted(RtspClient *client) override;
+    void OnRtspClientError(RtspClient *client, RtspClient::RtspClientError errorCode, RtspReplyCode rtspCode) override;
 
 protected:
     RtcSession* CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach);
@@ -62,6 +75,7 @@ protected:
 
 private:
     RtcMaster *rtcMaster;
+    std::map<std::string, std::list<RtcRequest*>> waittingPlayRequestMap;
 };
 
 }

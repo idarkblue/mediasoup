@@ -86,7 +86,7 @@ int RtcServer::OnMessage(NetConnection *nc)
 {
     std::string reason = "";
 
-    RtcRequest request(nc);
+    RtcRequest *request = new RtcRequest(nc);
     json jsonObject;
 
     try {
@@ -100,31 +100,31 @@ int RtcServer::OnMessage(NetConnection *nc)
     }
 
     try {
-        request.Parse(jsonObject);
+        request->Parse(jsonObject);
         int ret = 0;
-        switch (request.methodId) {
+        switch (request->methodId) {
             case RtcRequest::MethodId::SESSION_SETUP:
-            ret = this->SetupSession(&request);
+            ret = this->SetupSession(request);
             break;
 
             case RtcRequest::MethodId::STREAM_PUBLISH:
-            ret = this->PublishStream(&request);
+            ret = this->PublishStream(request);
             break;
 
             case RtcRequest::MethodId::STREAM_PLAY:
-            ret = this->PlayStream(&request);
+            ret = this->PlayStream(request);
             break;
 
             case RtcRequest::MethodId::STREAM_MUTE:
-            ret = this->MuteStream(&request);
+            ret = this->MuteStream(request);
             break;
 
             case RtcRequest::MethodId::STREAM_CLOSE:
-            ret = this->CloseStream(&request);
+            ret = this->CloseStream(request);
             break;
 
             case RtcRequest::MethodId::STREAM_HEARTBEAT:
-            ret = this->Heartbeat(&request);
+            ret = this->Heartbeat(request);
             break;
 
             default:
@@ -135,7 +135,7 @@ int RtcServer::OnMessage(NetConnection *nc)
 
         if (ret != 0) {
             PMS_ERROR("StreamId[{}] Request[{}] failed.",
-                request.stream, request.method);
+                request->stream, request->method);
             reason = "internal error";
             goto _error;
         }
@@ -146,14 +146,22 @@ int RtcServer::OnMessage(NetConnection *nc)
         goto _error;
     }
 
-    if (request.count == 0) {
-        request.Accept();
+    if (request->count == 0) {
+        request->Accept();
+    }
+
+    if (request->count == 0) {
+        delete request;
     }
 
     return 0;
 
 _error:
-    request.Error(reason.c_str());
+    request->Error(reason.c_str());
+
+    if (request->count == 0) {
+        delete request;
+    }
 
     return -1;
 }
@@ -262,9 +270,16 @@ int RtcServer::PlayStream(RtcRequest *request)
 
     auto *publisher = this->rtcMaster->FindPublisher(request->stream);
     if (publisher == nullptr) {
+        if (Configuration::pull.servers.size() != 0) {
+            request->count++;
+            this->Pull(request);
+            PMS_INFO("StreamId[{}] waritting for pulling, hold the request.", request->stream);
+            return 0;
+        }
+
         PMS_ERROR("StreamId[{}] Publisher not found", request->stream);
 
-        MS_THROW_ERROR("Publisher not found");
+        MS_THROW_ERROR("StreamId[%s] Publisher not found", request->stream.c_str());
 
         return -1;
     }
@@ -301,8 +316,6 @@ int RtcServer::PlayStream(RtcRequest *request)
         MS_THROW_ERROR("Play failed");
         return -1;
     }
-
-    request->count++;
 
     Context *ctx = (Context*) rtcSession->GetContext();
 
@@ -383,6 +396,74 @@ int RtcServer::Heartbeat(RtcRequest *request)
     return 0;
 }
 
+int RtcServer::Pull(RtcRequest *request)
+{
+    auto rtcSession = this->rtcMaster->CreateSession(request->stream, RtcSession::Role::PUBLISHER);
+
+    for (auto &server : Configuration::pull.servers) {
+        RtspClient *rtspClient = new RtspClient(this->rtcMaster, rtcSession);
+        rtspClient->SetListener(this);
+        std::string url = std::string("rtsp://") + server.ip +
+                        std::string(":") + std::to_string(server.port) +
+                        std::string("/") + request->stream;
+        rtspClient->Play(url);
+    }
+
+    return 0;
+}
+
+void RtcServer::HoldPlayRequest(RtcRequest *request)
+{
+    auto it = this->waittingPlayRequestMap.find(request->stream);
+
+    if (it == this->waittingPlayRequestMap.end()) {
+        std::list<RtcRequest*> requests;
+        requests.push_back(request);
+        this->waittingPlayRequestMap[request->stream] = requests;
+    } else {
+        auto &requests = it->second;
+        requests.push_back(request);
+    }
+}
+
+void RtcServer::ActivePlayRequest(std::string streamId)
+{
+    auto it = this->waittingPlayRequestMap.find(streamId);
+    if (it == this->waittingPlayRequestMap.end()) {
+        return;
+    }
+
+    PMS_INFO("StreamId[{}] Active players", streamId);
+
+    for (auto request : it->second) {
+        this->PlayStream(request);
+    }
+
+}
+
+void RtcServer::OnRtspClientPlayCompleted(RtspClient *client)
+{
+    auto rtcSession = client->GetRtcSession();
+    PMS_INFO("StreamId[{}] rtsp client[{}] play completed.",
+        rtcSession->GetStreamId());
+
+    this->ActivePlayRequest(rtcSession->GetStreamId());
+}
+
+void RtcServer::OnRtspClientPublishCompleted(RtspClient *client)
+{
+}
+
+void RtcServer::OnRtspClientError(RtspClient *client, RtspClient::RtspClientError errorCode, RtspReplyCode rtspCode)
+{
+    auto *rtcSession = client->GetRtcSession();
+
+    PMS_INFO("StreamId[{}] rtsp client[{}] error code {}",
+        rtcSession->GetStreamId(), client->GetURL(), errorCode);
+
+    this->DeleteSession(client->GetRtcSession());
+}
+
 RtcSession* RtcServer::CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach)
 {
     auto worker = this->rtcMaster->FindWorker(streamId);
@@ -441,6 +522,16 @@ void RtcServer::DeleteSession(RtcSession *session)
 
         if (ctx->nc) {
             ctx->nc->SetSession(nullptr);
+            auto it = this->waittingPlayRequestMap.find(session->GetStreamId());
+            if (it != this->waittingPlayRequestMap.end()) {
+                for (auto requestIt = it->second.begin(); requestIt != it->second.end(); ++requestIt) {
+                    auto request = *requestIt;
+                    if (request->nc == ctx->nc) {
+                        it->second.erase(requestIt);
+                        break;
+                    }
+                }
+            }
         }
 
         delete ctx;

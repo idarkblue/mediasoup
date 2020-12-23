@@ -6,6 +6,7 @@
 namespace pingos {
 
 enum RtspReplyCode {
+    RTSP_REPLY_CODE_INIT = 0,
     RTSP_REPLY_CODE_CONTINUE = 100,
     RTSP_REPLY_CODE_TIMEOUT = 110,
     RTSP_REPLY_CODE_OK = 200,
@@ -57,7 +58,7 @@ class RtspRemoteRequest {
 
 public:
     RtspRemoteRequest() = default;
-    RtspRemoteRequest(pingos::TcpConnection *c, RtspRequestHeader &header, std::string body = "");
+    RtspRemoteRequest(TcpConnection *c, RtspRequestHeader &header, std::string body = "");
     RtspRemoteRequest(const RtspRemoteRequest &request);
     virtual ~RtspRemoteRequest();
 
@@ -68,50 +69,29 @@ public:
     void Error(RtspReplyCode code);
 
 public:
-    pingos::TcpConnection *connection { nullptr };
+    TcpConnection *connection { nullptr };
     uint64_t cseq;
     RtspRequestHeader header;
     std::string body;
 };
 
-/*
-class RtspOptionsRequest : public RtspRemoteRequest {
+class RtspLocalRequest {
 public:
-    RtspOptionsRequest(RtspRequestHeader &headerLines);
+    RtspLocalRequest();
+    RtspLocalRequest(TcpConnection *c);
+    RtspLocalRequest(const RtspLocalRequest &request);
+    RtspLocalRequest(TcpConnection *c, RtspRequestHeader &newHeader, std::string newBody);
+    virtual ~RtspLocalRequest();
 
 public:
-    int FillReply(std::string &data) override;
+    int Send(RtspRequestHeader &newHeader, std::string newBody);
+    int Send();
+
+public:
+    TcpConnection *connection { nullptr };
+    uint64_t cseq;
+    RtspRequestHeader header;
+    std::string body;
 };
-
-class RtspGetParameterRequest : public RtspRemoteRequest {
-
-public:
-    int FillReply(std::string &data) override;
-};
-
-class RtspDescribeRequest : public RtspRemoteRequest {
-
-public:
-    int FillReply(std::string &data) override;
-};
-
-class RtspSetupRequest : public RtspRemoteRequest {
-
-public:
-    int FillReply(std::string &data) override;
-};
-
-class RtspPlayRequest : public RtspRemoteRequest {
-
-public:
-    int FillReply(std::string &data) override;
-};
-
-class RtspTeardownRequest : public RtspRemoteRequest {
-
-public:
-    int FillReply(std::string &data) override;
-};
-*/
 
 }

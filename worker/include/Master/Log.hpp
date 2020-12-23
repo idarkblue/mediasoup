@@ -6,8 +6,12 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 //#include "spdlog/sinks/rotating_file_sink.h"
-//#include "spdlog/sinks/daily_file_sink.h"
+#include "spdlog/sinks/daily_file_sink.h"
 #include "spdlog/sinks/stdout_sinks.h"
+
+#include <spdlog/details/null_mutex.h>
+#include <spdlog/details/file_helper.h>
+#include <spdlog/fmt/fmt.h>
 
 #define PMS_LOGGER "pms"
 #define PWS_LOGGER "pms"
@@ -33,7 +37,7 @@ public:
     static void AddLogger(std::string name, spdlog::level::level_enum level);
 
     static std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> consolSink;
-    static std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink;
+    static std::shared_ptr<spdlog::sinks::daily_file_sink_mt> fileSink;
 };
 
 #define PMS_TRACE(desc, ...) \

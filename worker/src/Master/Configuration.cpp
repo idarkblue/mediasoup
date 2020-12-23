@@ -20,6 +20,7 @@ RtspConfiguration Configuration::rtsp;
 MasterConfiguration Configuration::master;
 WebRtcConfiguration Configuration::webrtc;
 RecordConfiguration Configuration::record;
+PullConfiguration Configuration::pull;
 
 std::string Configuration::filePath;
 
@@ -157,6 +158,16 @@ int Configuration::Load()
 
         if (record.recordPath.empty() || record.recordPath.at(record.recordPath.length() - 1) != '/') {
             record.recordPath += "/";
+        }
+
+        auto jsonPullIt = jsonObject.find("pull");
+        if (jsonPullIt != jsonObject.end() && jsonPullIt->is_array()) {
+            for (auto &jsonItem : *jsonPullIt) {
+                PullConfiguration::ServerInfo si;
+                JSON_READ_VALUE_ASSERT(jsonItem, "ip", std::string, si.ip);
+                JSON_READ_VALUE_ASSERT(jsonItem, "port", uint16_t, si.port);
+                pull.servers.push_back(si);
+            }
         }
 
     } catch (const json::parse_error &error) {

@@ -120,8 +120,7 @@ void RtspServer::OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject)
     return;
 }
 
-void RtspServer::OnRtspTcpConnectionClosed(
-    pingos::TcpServer* tcpServer, pingos::TcpConnection* connection)
+void RtspServer::OnRtspTcpConnectionClosed(TcpServer* tcpServer, TcpConnection* connection)
 {
     Context *ctx = (Context *)(connection->GetContext());
     if (ctx) {
@@ -161,7 +160,7 @@ int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
 {
     std::string uri = request.header.GetUri();
     if (uri.empty()) {
-        request.Error(RTSP_REPLY_CODE_NOT_FOUND);
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
         PMS_ERROR("Invalid rtsp url, {}", request.header.GetUrl());
 
         return -1;
@@ -169,6 +168,12 @@ int RtspServer::OnRecvDescribe(RtspRemoteRequest &request)
 
     std::vector<std::string> strVec;
     RtspHeaderLines::SplitString(uri, '/', strVec);
+    if (strVec.size() == 0) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("Invalid rtsp url, {}", request.header.GetUrl());
+        return -1;
+    }
+
     std::string streamId = strVec[strVec.size() - 1];
 
     auto ctx = this->GetContext(request);

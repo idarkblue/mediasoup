@@ -6,13 +6,17 @@
 
 namespace pingos
 {
+	class TcpConnection;
 	class TcpConnection : public ::TcpConnection
 	{
 	public:
 		class Listener
 		{
 		public:
-			virtual void OnTcpConnectionPacketReceived(pingos::TcpConnection* connection, RtspHeaderLines &headerLines, std::string body) = 0;
+			virtual ~Listener() = default;
+
+		public:
+			virtual void OnTcpConnectionPacketReceived(TcpConnection* connection, RtspHeaderLines &headerLines, std::string body) = 0;
 		};
 
 	public:
@@ -26,7 +30,8 @@ namespace pingos
 		void Send(const uint8_t* data, size_t len, ::TcpConnection::onSendCallback* cb);
 		void Send(std::string &data, ::TcpConnection::onSendCallback* cb);
 		/* Pure virtual methods inherited from ::TcpConnection. */
-	public:
+
+	protected:
 		void UserOnTcpConnectionRead() override;
 
 	private:

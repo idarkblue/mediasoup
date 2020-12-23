@@ -458,6 +458,13 @@ int RtcSession::Close()
     return 0;
 }
 
+int RtcSession::SetProducerParameters(std::vector<ProducerParameters> &producerParameters)
+{
+    this->producerParameters = producerParameters;
+
+    return 0;
+}
+
 int RtcSession::SetConsumerParameters(std::vector<ConsumerParameters> &consumerParameters)
 {
     this->consumerParameters = consumerParameters;
@@ -537,6 +544,34 @@ int RtcSession::TrackPlay(std::string kind, uint16_t trackId)
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] play failed, consumer[{}] run request error",
                 this->sessionId, this->streamId, consumer.kind);
+            return -1;
+        }
+    }
+
+    PMS_INFO("SessionId[{}] StreamId[{}] play success", this->sessionId, this->streamId);
+
+    return 0;
+}
+
+int RtcSession::TrackPublish(std::string kind, uint16_t trackId)
+{
+    ChannelRequest request;
+
+    for (auto &producer : this->producerParameters) {
+        if (producer.kind != kind)
+        {
+            continue;
+        }
+
+        if (GenerateProducerRequest("transport.producer", producer.kind, request, std::to_string(trackId)) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate producer[{}] request error",
+                this->sessionId, this->streamId, producer.kind);
+            return -1;
+        }
+
+        if (ActiveRtcSessionRequest(request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] play failed, producer[{}] run request error",
+                this->sessionId, this->streamId, producer.kind);
             return -1;
         }
     }
@@ -648,7 +683,7 @@ int RtcSession::GenerateWebRtcTransportRequest(std::string method, ChannelReques
     return 0;
 }
 
-int RtcSession::GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request)
+int RtcSession::GenerateProducerRequest(std::string method, std::string kind, ChannelRequest &request, std::string trackId)
 {
     request.Init(method);
 
@@ -672,7 +707,13 @@ int RtcSession::GenerateProducerRequest(std::string method, std::string kind, Ch
     json jsonData = json::object();
 
     jsonInternal["routerId"] = this->routerId;
-    jsonInternal["transportId"] = this->sessionId;
+
+    if (trackId.empty()) {
+        jsonInternal["transportId"] = this->sessionId;
+    } else {
+        jsonInternal["transportId"] = this->sessionId + std::string("-") + trackId;
+    }
+
     jsonInternal["producerId"] = producerId;
 
     switch (Channel::Request::string2MethodId[method]) {

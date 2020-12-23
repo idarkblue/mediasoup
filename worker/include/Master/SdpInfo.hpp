@@ -80,6 +80,7 @@ struct ProducerParameters {
     std::string kind { "" };
     bool paused { false };
     std::string direction { "" };
+    uint16_t trackId;
 
     void FillJson(json &jsonObject);
     int GenerateConsumer(ConsumerParameters &consumer);
@@ -110,6 +111,8 @@ public:
     // Consumer
     int TransformSdp(WebRtcTransportParameters &rtcTransportParameters,
         std::vector<ConsumerParameters> &consumerParameters);
+
+    int TransformSdp(std::vector<ProducerParameters> &producerParameters);
 
 protected:
     // webrtc transport parameters

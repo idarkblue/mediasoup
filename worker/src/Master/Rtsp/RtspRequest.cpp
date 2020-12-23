@@ -8,6 +8,7 @@
 namespace pingos {
 
 static std::map<RtspReplyCode, std::string> RtspReplyCodeString = {
+    { RTSP_REPLY_CODE_INIT, "Init"},
     { RTSP_REPLY_CODE_CONTINUE, "Continue" },
     { RTSP_REPLY_CODE_TIMEOUT, "Connect Timeout" },
     { RTSP_REPLY_CODE_OK, "OK" },
@@ -154,6 +155,79 @@ void RtspRemoteRequest::Error(RtspReplyCode code)
     header.FillString(data);
 
     this->connection->Send(data, nullptr);
+}
+
+RtspLocalRequest::RtspLocalRequest()
+{
+
+}
+
+RtspLocalRequest::RtspLocalRequest(pingos::TcpConnection *c) : connection(c)
+{
+
+}
+
+
+RtspLocalRequest::RtspLocalRequest(const RtspLocalRequest &request)
+{
+    this->connection = request.connection;
+    this->cseq = request.cseq;
+    this->header = request.header;
+    this->body = request.body;
+}
+
+RtspLocalRequest::RtspLocalRequest(pingos::TcpConnection *c, RtspRequestHeader &newHeader, std::string newBody)
+{
+    static uint64_t sceq = 0;
+    this->connection = c;
+    this->cseq = sceq++;
+    this->header = newHeader;
+    this->body = newBody;
+}
+
+RtspLocalRequest::~RtspLocalRequest()
+{
+
+}
+
+int RtspLocalRequest::Send(RtspRequestHeader &newHeader, std::string newBody)
+{
+    newHeader.SetHeaderValue("User-Agent", "Pingos Rtsp Agent 0.9.1");
+    newHeader.SetHeaderValue("CSeq", std::to_string(this->cseq));
+    newHeader.SetHeaderValue("Content-Length", std::to_string(body.length()));
+
+    std::string data;
+    newHeader.FillString(data);
+
+    data += newBody;
+
+    if (!this->connection) {
+        return -1;
+    }
+
+    this->connection->Send(data, nullptr);
+
+    return 0;
+}
+
+int RtspLocalRequest::Send()
+{
+    this->header.SetHeaderValue("User-Agent", "Pingos Rtsp Agent 0.9.1");
+    this->header.SetHeaderValue("CSeq", std::to_string(this->cseq));
+    this->header.SetHeaderValue("Content-Length", std::to_string(body.length()));
+
+    std::string data;
+    this->header.FillString(data);
+
+    data += this->body;
+
+    if (!this->connection) {
+        return -1;
+    }
+
+    this->connection->Send(data, nullptr);
+
+    return 0;
 }
 
 }

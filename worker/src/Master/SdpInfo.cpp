@@ -318,6 +318,27 @@ int SdpInfo::TransformSdp(WebRtcTransportParameters &rtcParameters, std::vector<
     return 0;
 }
 
+int SdpInfo::TransformSdp(std::vector<ProducerParameters> &producerParameters)
+{
+    try {
+        auto jsonSdp = sdptransform::parse(this->sdp);
+        PMS_DEBUG("transform sdp : {}", jsonSdp.dump());
+
+        if (ParseProducers(jsonSdp, producerParameters) != 0) {
+            PMS_ERROR("Parse producers failed");
+            return -1;
+        }
+
+        PMS_DEBUG("Parse producers success, producer number: {}", producerParameters.size());
+
+    } catch (const json::parse_error &error) {
+        PMS_ERROR("JSON parsing error.");
+        return -1;
+    } 
+
+    return 0;
+}
+
 int SdpInfo::ParseWebRtcTransport(json &jsonSdp, WebRtcTransportParameters &rtcTransportParameters)
 {
     auto jsonFingerprintIt = jsonSdp.find("fingerprint");
@@ -448,6 +469,15 @@ int SdpInfo::ParseProducers(json &jsonSdp, std::vector<ProducerParameters> &prod
             return -1;
         }
 
+        std::string trackInfo;
+        JSON_READ_VALUE_DEFAULT(jsonRtp, "control", std::string, trackInfo, "");
+        auto pos = trackInfo.find("=");
+        if (pos != std::string::npos) {
+            std::string strTrackId = trackInfo.substr(pos + 1);
+            if (!strTrackId.empty()) {
+                producer.trackId = std::stoi(strTrackId);
+            }
+        }
         producerParameters.push_back(producer);
     }
 

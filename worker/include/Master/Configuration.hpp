@@ -66,6 +66,14 @@ struct RecordConfiguration {
     uint16_t cmdPort;
 };
 
+struct PullConfiguration {
+    struct ServerInfo {
+        std::string ip;
+        uint16_t port;
+    };
+    std::vector<ServerInfo> servers;
+};
+
 class Configuration
 {
 public:
@@ -83,6 +91,7 @@ public:
     static MasterConfiguration master;
     static WebRtcConfiguration webrtc;
     static RecordConfiguration record;
+    static PullConfiguration pull;
 
 private:
     static std::string filePath;
