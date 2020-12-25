@@ -315,7 +315,7 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
 
     ctx->setupRequests.push_back(request);
 
-    ctx->s->ConnectPlainTransport(request.header.GetHost(), track.remotePort, track.remoteRtcpPort, track.id);
+    ctx->s->ConnectPlainTransport(request.connection->GetPeerIp(), track.remotePort, track.remoteRtcpPort, track.id);
 
     ctx->stage = Stage::SETUP;
 
