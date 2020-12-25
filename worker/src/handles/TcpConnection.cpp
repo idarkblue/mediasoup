@@ -130,19 +130,22 @@ void TcpConnection::Dump() const
 }
 
 void TcpConnection::Setup(
-  Listener* listener, struct sockaddr_storage* localAddr, const std::string& localIp, uint16_t localPort)
+  Listener* listener, struct sockaddr_storage* localAddr,
+  const std::string& localIp, uint16_t localPort, bool uvHandleInited)
 {
 	MS_TRACE();
 
-	// Set the UV handle.
-	int err = uv_tcp_init(DepLibUV::GetLoop(), this->uvHandle);
+	if (!uvHandleInited) {
+		// Set the UV handle.
+		int err = uv_tcp_init(DepLibUV::GetLoop(), this->uvHandle);
 
-	if (err != 0)
-	{
-		delete this->uvHandle;
-		this->uvHandle = nullptr;
+		if (err != 0)
+		{
+			delete this->uvHandle;
+			this->uvHandle = nullptr;
 
-		MS_THROW_ERROR("uv_tcp_init() failed: %s", uv_strerror(err));
+			MS_THROW_ERROR("uv_tcp_init() failed: %s", uv_strerror(err));
+		}
 	}
 
 	// Set the listener.

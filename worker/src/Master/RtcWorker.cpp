@@ -153,17 +153,27 @@ RtcSession *RtcWorker::CreateSession(std::string streamId, std::string sessionId
 
 void RtcWorker::DeleteSession(std::string streamId, std::string sessionId)
 {
-    if (RtcWorker::streamsMap.count(streamId) == 0 || !RtcWorker::streamsMap[streamId]) {
-        PMS_ERROR("SessionId[{}] Stream[{}] delete session failed, stream not found", streamId, sessionId);
+    auto it = RtcWorker::streamsMap.find(streamId);
+    if (it == RtcWorker::streamsMap.end() || !it->second) {
+        PMS_ERROR("SessionId[{}] Stream[{}] delete session failed, stream not found", sessionId, streamId);
         return;
     }
 
-    auto *rtcSession = RtcWorker::streamsMap[streamId]->RemoveSession(sessionId);
+    auto *stream = it->second;
+    auto *rtcSession = stream->RemoveSession(sessionId);
+    if (!rtcSession) {
+        PMS_ERROR("SessionId[{}] Stream[{}] remove session ptr is nullptr", sessionId, streamId);
+        return;
+    }
 
     PMS_INFO("SessionId[{}] Stream[{}] delete session success, ptr[{}]",
         sessionId, streamId, (void*)rtcSession);
 
-    if (rtcSession) {
+    if (rtcSession->GetRole() == RtcSession::Role::PUBLISHER) {
+        delete rtcSession;
+        delete stream;
+        RtcWorker::streamsMap.erase(it);
+    } else {
         delete rtcSession;
     }
 

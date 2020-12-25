@@ -80,7 +80,6 @@ public:
     RtspLocalRequest();
     RtspLocalRequest(TcpConnection *c);
     RtspLocalRequest(const RtspLocalRequest &request);
-    RtspLocalRequest(TcpConnection *c, RtspRequestHeader &newHeader, std::string newBody);
     virtual ~RtspLocalRequest();
 
 public:

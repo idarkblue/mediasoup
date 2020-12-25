@@ -56,7 +56,7 @@ public:
 	  Listener* listener,
 	  struct sockaddr_storage* localAddr,
 	  const std::string& localIp,
-	  uint16_t localPort);
+	  uint16_t localPort, bool uvHandleInited = false);
 	bool IsClosed() const
 	{
 		return this->closed;

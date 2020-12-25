@@ -46,6 +46,7 @@ public:
 protected:
     void OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject) override;
     void OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject) override;
+    void OnRtcSessionClosed(RtcSession *rtcSession) override;
 
 // Implement NetServer::Listener
 protected:

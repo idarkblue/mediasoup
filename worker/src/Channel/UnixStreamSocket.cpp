@@ -109,6 +109,8 @@ namespace Channel
 
 		try
 		{
+			std::string strMsg(msg, msg + msgLen);
+			MS_DEBUG_TAG(rtp, "channel recv %s", strMsg.c_str());
 			json jsonMessage = json::parse(msg, msg + msgLen);
 			auto* request    = new Channel::Request(this, jsonMessage);
 

@@ -14,7 +14,16 @@ RtcStream::RtcStream(std::string streamId)
 
 RtcStream::~RtcStream()
 {
-
+    if (this->publisher) {
+        delete this->publisher;
+        this->publisher = nullptr;
+    }
+    for (auto it = this->playersMap.begin(); it != this->playersMap.end(); ++it) {
+        if (it->second) {
+            delete it->second;
+        }
+    }
+    this->playersMap.clear();
 }
 
 int RtcStream::Join(RtcSession *rtcSession)

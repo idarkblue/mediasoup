@@ -82,6 +82,37 @@ void RtcServer::OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject)
 
 }
 
+void RtcServer::OnRtcSessionClosed(RtcSession *session)
+{
+    PMS_INFO("SessionId[{}] StreamId[{}] rtc session closed.", session->GetSessionId(), session->GetStreamId());
+
+    auto streamId = session->GetStreamId();
+
+    Context *ctx = (Context *) session->GetContext();
+
+    if (ctx) {
+        session->SetContext(nullptr);
+
+        if (ctx->nc) {
+            ctx->nc->SetSession(nullptr);
+            auto it = this->waittingPlayRequestMap.find(session->GetStreamId());
+            if (it != this->waittingPlayRequestMap.end()) {
+                for (auto requestIt = it->second.begin(); requestIt != it->second.end(); ++requestIt) {
+                    auto request = *requestIt;
+                    if (request->nc == ctx->nc) {
+                        it->second.erase(requestIt);
+                        break;
+                    }
+                }
+            }
+        }
+
+        delete ctx;
+    }
+
+    return;
+}
+
 int RtcServer::OnMessage(NetConnection *nc)
 {
     std::string reason = "";
@@ -273,6 +304,7 @@ int RtcServer::PlayStream(RtcRequest *request)
         if (Configuration::pull.servers.size() != 0) {
             request->count++;
             this->Pull(request);
+            this->HoldPlayRequest(request);
             PMS_INFO("StreamId[{}] waritting for pulling, hold the request.", request->stream);
             return 0;
         }
@@ -403,6 +435,7 @@ int RtcServer::Pull(RtcRequest *request)
     for (auto &server : Configuration::pull.servers) {
         RtspClient *rtspClient = new RtspClient(this->rtcMaster, rtcSession);
         rtspClient->SetListener(this);
+        rtspClient->SetRtcSession(rtcSession);
         std::string url = std::string("rtsp://") + server.ip +
                         std::string(":") + std::to_string(server.port) +
                         std::string("/") + request->stream;
@@ -445,7 +478,7 @@ void RtcServer::OnRtspClientPlayCompleted(RtspClient *client)
 {
     auto rtcSession = client->GetRtcSession();
     PMS_INFO("StreamId[{}] rtsp client[{}] play completed.",
-        rtcSession->GetStreamId());
+        rtcSession->GetStreamId(), client->GetURL());
 
     this->ActivePlayRequest(rtcSession->GetStreamId());
 }
@@ -461,7 +494,7 @@ void RtcServer::OnRtspClientError(RtspClient *client, RtspClient::RtspClientErro
     PMS_INFO("StreamId[{}] rtsp client[{}] error code {}",
         rtcSession->GetStreamId(), client->GetURL(), errorCode);
 
-    this->DeleteSession(client->GetRtcSession());
+//    this->DeleteSession(client->GetRtcSession());
 }
 
 RtcSession* RtcServer::CreateSession(NetConnection *nc, std::string streamId, RtcSession::Role role, bool attach)

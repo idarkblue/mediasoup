@@ -29,6 +29,7 @@ public:
     public:
         virtual void OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject) = 0;
         virtual void OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject) = 0;
+        virtual void OnRtcSessionClosed(RtcSession *rtcSession) = 0;
     };
 
 public:

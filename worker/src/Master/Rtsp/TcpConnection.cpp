@@ -64,6 +64,8 @@ namespace pingos
 
 			size_t headerLength = headerEnd + 4;
 
+			header = header.substr(0, headerLength);
+
 			RtspHeaderLines headerLines(header);
 
 			std::string strContentLength = headerLines.GetHeaderValue("content-length");

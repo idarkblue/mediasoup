@@ -677,8 +677,12 @@ int SdpInfo::ParseEncodings(json &jsonRtp, std::vector<RTC::RtpEncodingParameter
             auto items = splitOneOf(ssrcs, " ");
 
             SsrcInfo ssrcInfo;
-            ssrcInfo.ssrc = (uint32_t) std::stoul(items[0]);
-            ssrcInfo.rtxSsrc = (uint32_t) std::stoul(items[1]);
+            if (items.size() == 1) {
+                ssrcInfo.ssrc = (uint32_t) std::stoul(items[0]);
+            } else if (items.size() == 2) {
+                ssrcInfo.ssrc = (uint32_t) std::stoul(items[0]);
+                ssrcInfo.rtxSsrc = (uint32_t) std::stoul(items[1]);
+            }
 
             ssrcInfos.emplace_back(ssrcInfo);
             break;

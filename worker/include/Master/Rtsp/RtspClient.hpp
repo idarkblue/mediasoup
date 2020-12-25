@@ -85,6 +85,7 @@ protected:
 protected:
     void OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject) override;
     void OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject) override;
+    void OnRtcSessionClosed(RtcSession *rtcSession) override;
 
 // Implement TcpClient::Listener
 protected:
@@ -107,6 +108,7 @@ private:
     RtcSession *rtcSession { nullptr };
     std::vector<pingos::ProducerParameters> producerParameters;
     Listener *listener { nullptr };
+    bool closed { true };
 };
 
 }

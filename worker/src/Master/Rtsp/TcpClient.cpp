@@ -91,11 +91,24 @@ namespace pingos
 		this->SetLocalAddress();
 
 		try {
-			connection.Setup(this, &(this->localAddr), this->localIp, this->localPort);
+			connection.Setup(this, &(this->localAddr), this->localIp, this->localPort, true);
 		}
 		catch (const MediaSoupError& error)	{
 			PMS_ERROR("TcpClient[{}] Setup failed", (void *) this);
 
+			return;
+		}
+
+		// Start receiving data.
+		try
+		{
+			// NOTE: This may throw.
+			connection.Start();
+		}
+		catch (const MediaSoupError& error)
+		{
+			PMS_ERROR("TcpClient[{}] Start failed, reason {}",
+				(void *) this, error.what());
 			return;
 		}
 

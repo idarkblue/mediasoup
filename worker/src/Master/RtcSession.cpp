@@ -86,6 +86,10 @@ RtcSession::~RtcSession()
     json jsonData = json::object();
     jsonData["sessionState"] = "closed";
     this->FireEvent("sessionstatechange", jsonData);
+    for(auto &listener : this->listeners) {
+        listener->OnRtcSessionClosed(this);
+    }
+    PMS_INFO("SessionId[{}] StreamId[{}] session ptr deleted", this->sessionId, this->streamId);
 }
 
 void RtcSession::AddListener(RtcSession::Listener *listener)
@@ -475,6 +479,19 @@ int RtcSession::SetConsumerParameters(std::vector<ConsumerParameters> &consumerP
 int RtcSession::CreatePlainTransport(PlainTransportConstructor &plainTransportParameters)
 {
     ChannelRequest request;
+
+    if (GenerateRouterRequest("worker.createRouter", request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate router request error",
+            this->sessionId, this->streamId);
+        //return -1;
+    }
+
+    if (ActiveRtcSessionRequest(request) != 0) {
+        PMS_ERROR("SessionId[{}] StreamId[{}] play failed, run router request error",
+            this->sessionId, this->streamId);
+        //return -1;
+    }
+
     request.Init("router.createPlainTransport");
 
     json jsonInternal;
@@ -509,10 +526,12 @@ int RtcSession::ConnectPlainTransport(std::string ip, uint16_t port, uint16_t rt
     jsonInternal["routerId"] = this->routerId;
     jsonInternal["transportId"] = this->sessionId + std::string("-") + std::to_string(trackId);
 
+    request.SetInternal(jsonInternal);
+
     json jsonData;
     jsonData["ip"] = ip;
     jsonData["port"] = port;
-    jsonData["rtcpPort"] = rtcpPort;
+//    jsonData["rtcpPort"] = rtcpPort;
 
     request.SetData(jsonData);
 
@@ -563,7 +582,7 @@ int RtcSession::TrackPublish(std::string kind, uint16_t trackId)
             continue;
         }
 
-        if (GenerateProducerRequest("transport.producer", producer.kind, request, std::to_string(trackId)) != 0) {
+        if (GenerateProducerRequest("transport.produce", producer.kind, request, std::to_string(trackId)) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] play failed, generate producer[{}] request error",
                 this->sessionId, this->streamId, producer.kind);
             return -1;

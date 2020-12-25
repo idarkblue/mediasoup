@@ -164,7 +164,8 @@ RtspLocalRequest::RtspLocalRequest()
 
 RtspLocalRequest::RtspLocalRequest(pingos::TcpConnection *c) : connection(c)
 {
-
+    static uint64_t sceq = 0;
+    this->cseq = sceq++;
 }
 
 
@@ -174,15 +175,6 @@ RtspLocalRequest::RtspLocalRequest(const RtspLocalRequest &request)
     this->cseq = request.cseq;
     this->header = request.header;
     this->body = request.body;
-}
-
-RtspLocalRequest::RtspLocalRequest(pingos::TcpConnection *c, RtspRequestHeader &newHeader, std::string newBody)
-{
-    static uint64_t sceq = 0;
-    this->connection = c;
-    this->cseq = sceq++;
-    this->header = newHeader;
-    this->body = newBody;
 }
 
 RtspLocalRequest::~RtspLocalRequest()

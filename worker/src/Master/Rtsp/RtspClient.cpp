@@ -34,6 +34,7 @@ void RtspClient::SetListener(Listener *listener)
 void RtspClient::SetRtcSession(RtcSession *session)
 {
     this->rtcSession = session;
+    session->AddListener(this);
 }
 
 RtcSession* RtspClient::GetRtcSession()
@@ -135,21 +136,6 @@ void RtspClient::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
 
     uint16_t port, rtcpPort;
 
-    std::string transportId;
-
-    JSON_READ_VALUE_THROW(jsonObject, "id", std::string, transportId);
-    uint16_t trackId = 0;
-    auto pos = transportId.find_last_of("-");
-    if (pos != std::string::npos) {
-        auto strTrackId = transportId.substr(pos + 1);
-        if (strTrackId.empty()) {
-            PMS_ERROR("RtspClient[{}] SessionId[{}] missing trackId.", this->url, rtcSession->GetSessionId());
-            return;
-        }
-
-        trackId = std::stoi(strTrackId);
-    }
-
     auto jsonDataIt = jsonObject.find("data");
     if (jsonDataIt == jsonObject.end()) {
         PMS_ERROR("RtspClient[{}] SessionId[{}] missing data.", this->url, rtcSession->GetSessionId());
@@ -162,14 +148,34 @@ void RtspClient::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
         return;
     }
 
+    JSON_READ_VALUE_THROW(*jsonTupleIt, "localPort", uint16_t, port);
+
+#if 0
     auto jsonRtcpTupleIt = jsonDataIt->find("rtcpTuple");
     if (jsonRtcpTupleIt == jsonDataIt->end()) {
         PMS_ERROR("RtspClient[{}] SessionId[{}] missing rtcpTuple.", this->url, rtcSession->GetSessionId());
         return;
     }
 
-    JSON_READ_VALUE_THROW(*jsonTupleIt, "localPort", uint16_t, port);
     JSON_READ_VALUE_THROW(*jsonRtcpTupleIt, "localPort", uint16_t, rtcpPort);
+#else
+    rtcpPort = port;
+#endif
+
+    std::string transportId;
+
+    JSON_READ_VALUE_THROW(*jsonDataIt, "id", std::string, transportId);
+    uint16_t trackId = 0;
+    auto pos = transportId.find_last_of("-");
+    if (pos != std::string::npos) {
+        auto strTrackId = transportId.substr(pos + 1);
+        if (strTrackId.empty()) {
+            PMS_ERROR("RtspClient[{}] SessionId[{}] missing trackId.", this->url, rtcSession->GetSessionId());
+            return;
+        }
+
+        trackId = std::stoi(strTrackId);
+    }
 
     this->RequestSetup(trackId, port, rtcpPort);
 
@@ -184,6 +190,18 @@ void RtspClient::OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject)
     return;
 }
 
+void RtspClient::OnRtcSessionClosed(RtcSession *rtcSession)
+{
+    PMS_INFO("SessionId[{}] StreamId[{}] rtc session closed.", rtcSession->GetSessionId(), rtcSession->GetStreamId());
+    if (!this->closed) {
+        this->tcpClient.Close();
+    }
+
+    this->rtcSession = nullptr;
+
+    return;
+}
+
 int RtspClient::RequestOptions()
 {
     RtspLocalRequest request(this->tcpClient.GetTcpConnection());
@@ -191,7 +209,7 @@ int RtspClient::RequestOptions()
     RtspRequestHeader header;
     header.SetMethod("OPTIONS", this->url);
 
-    if ( request.Send(header, "") != 0) {
+    if (request.Send(header, "") != 0) {
         PMS_ERROR("RtspClient[{}] Request OPTIONS failed", this->url);
         return -1;
     }
@@ -246,7 +264,15 @@ int RtspClient::RequestSetup(uint16_t trackId, uint16_t rtpPort, uint16_t rtcpPo
     RtspLocalRequest request(this->tcpClient.GetTcpConnection());
 
     RtspRequestHeader header;
-    header.SetMethod("SETUP", this->url);
+    std::string setupLine = this->url;
+
+    auto pos = this->url.find("?");
+    if (pos != std::string::npos) {
+        setupLine = this->url.substr(0, pos);
+    }
+
+    setupLine += std::string("/trackID=") + std::to_string(trackId);
+    header.SetMethod("SETUP", setupLine);
 
     //Transport: RTP/AVP/UDP;unicast;client_port=11460-11461
     std::string transportLine = std::string("RTP/AVP/UDP;unicast;client_port=") + std::to_string(rtpPort) + std::string("-") + std::to_string(rtcpPort);
@@ -339,8 +365,8 @@ int RtspClient::OnDescribeAck(RtspReplyHeader &header, std::string &body)
         pingos::PlainTransportConstructor plainTransportParameters;
         plainTransportParameters.announcedIp = Configuration::webrtc.announcedIp;
         plainTransportParameters.listenIp = Configuration::webrtc.listenIp;
-        plainTransportParameters.comedia = true;
-        plainTransportParameters.rtcpMux = false;
+        plainTransportParameters.comedia = false;
+        plainTransportParameters.rtcpMux = true;
         plainTransportParameters.srtpCryptoSuite = false;
         plainTransportParameters.trackId = producer.trackId;
 
@@ -391,6 +417,7 @@ int RtspClient::OnSetupAck(RtspReplyHeader &header)
 
     uint16_t trackId = it->second;
 
+    kvs.clear();
     RtspHeaderLines::SplitString(strServerPorts, "-", kvs);
     if (kvs.size() != 2 || kvs[0].empty() || kvs[1].empty()) {
         PMS_ERROR("RtspClient[{}] missing server_port, invalid format [{}]",
@@ -400,6 +427,12 @@ int RtspClient::OnSetupAck(RtspReplyHeader &header)
 
     uint16_t serverRtpPort = std::stoi(kvs[0]);
     uint16_t serverRtcpPort = std::stoi(kvs[1]);
+
+    for (auto &producer : this->producerParameters) {
+        if (producer.trackId == trackId) {
+            this->rtcSession->TrackPublish(producer.kind, producer.trackId);
+        }
+    }
 
     if (this->rtcSession->ConnectPlainTransport(source, serverRtpPort, serverRtcpPort, trackId) != 0) {
         PMS_ERROR("RtspClient[{}] connect plain transport failed", this->url);
@@ -411,10 +444,6 @@ int RtspClient::OnSetupAck(RtspReplyHeader &header)
 
 int RtspClient::OnPlayAck(RtspReplyHeader &header)
 {
-    for (auto &producer : this->producerParameters) {
-        this->rtcSession->TrackPublish(producer.kind, producer.trackId);
-    }
-
     if (this->listener) {
         this->listener->OnRtspClientPlayCompleted(this);
     }
@@ -497,6 +526,7 @@ void RtspClient::OnTcpClientConnected(TcpClient *client, pingos::TcpConnection* 
         client->Close();
         return;
     } else {
+        this->closed = false;
         PMS_INFO("RtspClient[{}] Request options success.", this->url);
     }
 }
@@ -508,6 +538,13 @@ void RtspClient::OnTcpClientClosed(TcpClient *client, pingos::TcpConnection* con
     if (this->listener) {
         this->listener->OnRtspClientError(this, DICONNECTED);
     }
+
+    if (this->rtcSession) {
+        this->rtcMaster->DeleteSession(this->rtcSession->GetStreamId(), this->rtcSession->GetSessionId());
+        this->rtcSession = nullptr;
+    }
+
+    this->closed = true;
 }
 
 }

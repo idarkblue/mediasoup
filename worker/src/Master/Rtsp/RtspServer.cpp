@@ -92,6 +92,9 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
         request.Error(RTSP_REPLY_CODE_INTERNAL_SERVER_ERROR);
         return;
     }
+    JSON_READ_VALUE_THROW(*jsonTupleIt, "localPort", uint16_t, port);
+
+#if 0
     auto jsonRtcpTupleIt = jsonDataIt->find("rtcpTuple");
     if (jsonRtcpTupleIt == jsonDataIt->end()) {
         PMS_ERROR("StreamId[{}] SessionId[{}] missing rtcpTuple.", ctx->streamId, ctx->sessionId);
@@ -99,8 +102,10 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
         return;
     }
 
-    JSON_READ_VALUE_THROW(*jsonTupleIt, "localPort", uint16_t, port);
     JSON_READ_VALUE_THROW(*jsonRtcpTupleIt, "localPort", uint16_t, rtcpPort);
+#else
+    rtcpPort = port;
+#endif
 
     RtspHeaderLines lines;
     std::string value = std::string("RTP/AVP/UDP;unicast;client_port=") + std::to_string(track.remotePort) + std::string("-") + std::to_string(track.remoteRtcpPort) + std::string(";");
@@ -108,6 +113,8 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
     value += std::string("server_port=") + std::to_string(port) + std::string("-") + std::to_string(rtcpPort) + std::string(";");
     value += std::string("ssrc=") + std::to_string(track.ssrc);
     lines.SetHeaderValue("Transport", value);
+    lines.SetHeaderValue("Session", ctx->sessionId);
+
     request.Accept(lines);
 
     ctx->setupRequests.clear();
@@ -117,6 +124,20 @@ void RtspServer::OnRtcSessionAck(RtcSession *rtcSession, json &jsonObject)
 
 void RtspServer::OnRtcSessionEvent(RtcSession *rtcSession, json &jsonObject)
 {
+    return;
+}
+
+void RtspServer::OnRtcSessionClosed(RtcSession *rtcSession)
+{
+    PMS_INFO("SessionId[{}] StreamId[{}] rtc session closed.", rtcSession->GetSessionId(), rtcSession->GetStreamId());
+
+    if (rtcSession && rtcSession->GetContext()) {
+        RtspServer::Context *ctx = (RtspServer::Context*) rtcSession->GetContext();
+        rtcSession->SetContext(nullptr);
+        ctx->s = nullptr;
+        this->DeleteContext(ctx);
+    }
+
     return;
 }
 
@@ -237,6 +258,13 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
 
     std::string uri = request.header.GetUri();
     std::string strTrackId = RtspHeaderLines::GetSplitValue(uri, '/', "trackID");
+    if (strTrackId.empty()) {
+        request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
+        PMS_ERROR("StreamId[{}] SessionId[{}] Invalid Rtsp request, trackID needed.",
+            ctx->streamId, ctx->sessionId);
+        return -1;
+    }
+
     uint16_t trackId = std::stoi(strTrackId);
     auto it = ctx->tracks.find(trackId);
 
@@ -278,14 +306,16 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
     pingos::PlainTransportConstructor plainTransportParameters;
     plainTransportParameters.announcedIp = Configuration::webrtc.announcedIp;
     plainTransportParameters.listenIp = Configuration::webrtc.listenIp;
-    plainTransportParameters.comedia = true;
-    plainTransportParameters.rtcpMux = false;
+    plainTransportParameters.comedia = false;
+    plainTransportParameters.rtcpMux = true;
     plainTransportParameters.srtpCryptoSuite = false;
     plainTransportParameters.trackId = track.id;
 
     ctx->s->CreatePlainTransport(plainTransportParameters);
 
     ctx->setupRequests.push_back(request);
+
+    ctx->s->ConnectPlainTransport(request.header.GetHost(), track.remotePort, track.remoteRtcpPort, track.id);
 
     ctx->stage = Stage::SETUP;
 
@@ -576,35 +606,44 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
                     continue;
                 }
 
+                auto ssrc = encoding.ssrc;
+                for (auto &rtpMappingEncoding : producer.rtpMapping.encodings) {
+                    if (rtpMappingEncoding.mappedSsrc == encoding.ssrc) {
+                        ssrc = rtpMappingEncoding.mappedSsrc;
+                    }
+                }
+
                 Track track;
                 track.kind = producer.kind;
                 track.id = trackId++;
-                track.ssrc = encoding.ssrc;
+                track.ssrc = ssrc;
                 ctx->tracks[track.id] = track;
 
                 json jsonSsrc = json::object();
                 jsonSsrc["attribute"] = "cname";
-                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["id"] = ssrc;
                 jsonSsrc["value"] = producer.rtpParameters.rtcp.cname;
                 jsonSsrcs.push_back(jsonSsrc);
 
                 jsonSsrc = json::object();
                 jsonSsrc["attribute"] = "msid";
-                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["id"] = ssrc;
                 jsonSsrc["value"] = OfferMslabel + " " + OfferMslabel + "-" + producer.kind;
                 jsonSsrcs.push_back(jsonSsrc);
 
                 jsonSsrc = json::object();
                 jsonSsrc["attribute"] = "mslabel";
-                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["id"] = ssrc;
                 jsonSsrc["value"] = OfferMslabel;
                 jsonSsrcs.push_back(jsonSsrc);
 
                 jsonSsrc = json::object();
                 jsonSsrc["attribute"] = "label";
-                jsonSsrc["id"] = encoding.ssrc;
+                jsonSsrc["id"] = ssrc;
                 jsonSsrc["value"] = OfferMslabel + "-" + producer.kind;
                 jsonSsrcs.push_back(jsonSsrc);
+
+                break;
 
                 if (!encoding.hasRtx) {
                     continue;
@@ -636,7 +675,7 @@ std::string RtspServer::GenerateSdp(RtspServer::Context *ctx, std::vector<pingos
 
                 json jsonGroup;
                 jsonGroup["semantics"] = "FID";
-                jsonGroup["ssrcs"] = std::to_string(encoding.ssrc) + " " + std::to_string(encoding.rtx.ssrc);
+                jsonGroup["ssrcs"] = std::to_string(ssrc) + " " + std::to_string(encoding.rtx.ssrc);
                 jsonGroups.push_back(jsonGroup);
                 break;
             }
