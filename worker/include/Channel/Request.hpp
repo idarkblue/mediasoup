@@ -78,10 +78,10 @@ namespace Channel
 		Request(Channel::UnixStreamSocket* channel, json& jsonRequest);
 		virtual ~Request();
 
-		void Accept();
-		void Accept(json& data);
-		void Error(const char* reason = nullptr);
-		void TypeError(const char* reason = nullptr);
+		virtual void Accept();
+		virtual void Accept(json& data);
+		virtual void Error(const char* reason = nullptr);
+		virtual void TypeError(const char* reason = nullptr);
 
 	public:
 		// Passed by argument.
