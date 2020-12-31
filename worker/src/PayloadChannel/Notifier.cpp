@@ -2,17 +2,18 @@
 // #define MS_LOG_DEV_LEVEL 3
 
 #include "PayloadChannel/Notifier.hpp"
+#include "PayloadChannel/Channel.hpp"
 #include "Logger.hpp"
 
 namespace PayloadChannel
 {
 	/* Class variables. */
 
-	PayloadChannel::UnixStreamSocket* Notifier::payloadChannel{ nullptr };
+	PayloadChannel::Channel* Notifier::payloadChannel{ nullptr };
 
 	/* Static methods. */
 
-	void Notifier::ClassInit(PayloadChannel::UnixStreamSocket* payloadChannel)
+	void Notifier::ClassInit(PayloadChannel::Channel* payloadChannel)
 	{
 		MS_TRACE();
 

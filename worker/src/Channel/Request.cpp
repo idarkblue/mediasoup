@@ -2,6 +2,7 @@
 // #define MS_LOG_DEV_LEVEL 3
 
 #include "Channel/Request.hpp"
+#include "Channel/Channel.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
 #include "Utils.hpp"
@@ -68,7 +69,7 @@ namespace Channel
 
 	/* Instance methods. */
 
-	Request::Request(Channel::UnixStreamSocket* channel, json& jsonRequest) : channel(channel)
+	Request::Request(Channel* channel, json& jsonRequest) : channel(channel)
 	{
 		MS_TRACE();
 

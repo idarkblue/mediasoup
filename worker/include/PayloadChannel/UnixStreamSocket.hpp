@@ -5,6 +5,7 @@
 #include "PayloadChannel/Notification.hpp"
 #include "PayloadChannel/Request.hpp"
 #include "handles/UnixStreamSocket.hpp"
+#include "PayloadChannel/Channel.hpp"
 #include <json.hpp>
 
 namespace PayloadChannel
@@ -49,28 +50,15 @@ namespace PayloadChannel
 		}
 	};
 
-	class UnixStreamSocket : public ConsumerSocket::Listener
+	class UnixStreamSocket : public ConsumerSocket::Listener , public Channel
 	{
-	public:
-		class Listener
-		{
-		public:
-			virtual void OnPayloadChannelNotification(
-			  PayloadChannel::UnixStreamSocket* payloadChannel,
-			  PayloadChannel::Notification* notification) = 0;
-			virtual void OnPayloadChannelRequest(
-			  PayloadChannel::UnixStreamSocket* payloadChannel, PayloadChannel::Request* request) = 0;
-			virtual void OnPayloadChannelClosed(PayloadChannel::UnixStreamSocket* payloadChannel) = 0;
-		};
-
 	public:
 		explicit UnixStreamSocket(int consumerFd, int producerFd);
 		virtual ~UnixStreamSocket();
 
 	public:
-		void SetListener(Listener* listener);
-		void Send(json& jsonMessage, const uint8_t* payload, size_t payloadLen);
-		void Send(json& jsonMessage);
+		void Send(json& jsonMessage, const uint8_t* payload, size_t payloadLen) override;
+		void Send(json& jsonMessage) override;
 
 	private:
 		void SendImpl(const void* nsPayload, size_t nsPayloadLen);
@@ -81,8 +69,6 @@ namespace PayloadChannel
 		void OnConsumerSocketClosed(ConsumerSocket* consumerSocket) override;
 
 	private:
-		// Passed by argument.
-		Listener* listener{ nullptr };
 		// Others.
 		ConsumerSocket consumerSocket;
 		ProducerSocket producerSocket;

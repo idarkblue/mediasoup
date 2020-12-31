@@ -3,16 +3,17 @@
 
 #include "Channel/Notifier.hpp"
 #include "Logger.hpp"
+#include "Channel/Channel.hpp"
 
 namespace Channel
 {
 	/* Class variables. */
 
-	Channel::UnixStreamSocket* Notifier::channel{ nullptr };
+	Channel* Notifier::channel{ nullptr };
 
 	/* Static methods. */
 
-	void Notifier::ClassInit(Channel::UnixStreamSocket* channel)
+	void Notifier::ClassInit(Channel* channel)
 	{
 		MS_TRACE();
 

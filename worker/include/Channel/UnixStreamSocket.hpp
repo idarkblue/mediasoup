@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "Channel/Request.hpp"
 #include "handles/UnixStreamSocket.hpp"
+#include "Channel/Channel.hpp"
 #include <json.hpp>
 
 namespace Channel
@@ -49,23 +50,15 @@ namespace Channel
 		}
 	};
 
-	class UnixStreamSocket : public ConsumerSocket::Listener
+	class UnixStreamSocket : public ConsumerSocket::Listener,
+							public Channel
 	{
-	public:
-		class Listener
-		{
-		public:
-			virtual void OnChannelRequest(Channel::UnixStreamSocket* channel, Channel::Request* request) = 0;
-			virtual void OnChannelClosed(Channel::UnixStreamSocket* channel) = 0;
-		};
-
 	public:
 		explicit UnixStreamSocket(int consumerFd, int producerFd);
 		virtual ~UnixStreamSocket();
 
 	public:
-		void SetListener(Listener* listener);
-		void Send(json& jsonMessage);
+		virtual void Send(json& jsonMessage) override;
 		void SendLog(char* message, size_t messageLen);
 
 	private:
@@ -77,8 +70,6 @@ namespace Channel
 		void OnConsumerSocketClosed(ConsumerSocket* consumerSocket) override;
 
 	private:
-		// Passed by argument.
-		Listener* listener{ nullptr };
 		// Others.
 		ConsumerSocket consumerSocket;
 		ProducerSocket producerSocket;

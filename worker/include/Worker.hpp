@@ -15,12 +15,12 @@
 
 using json = nlohmann::json;
 
-class Worker : public Channel::UnixStreamSocket::Listener,
-               public PayloadChannel::UnixStreamSocket::Listener,
+class Worker : public Channel::Channel::Listener,
+               public PayloadChannel::Channel::Listener,
                public SignalsHandler::Listener
 {
 public:
-	explicit Worker(Channel::UnixStreamSocket* channel, PayloadChannel::UnixStreamSocket* payloadChannel);
+	explicit Worker(Channel::Channel* channel, PayloadChannel::Channel* payloadChannel);
 	~Worker();
 
 private:
@@ -30,19 +30,19 @@ private:
 	void SetNewRouterIdFromInternal(json& internal, std::string& routerId) const;
 	RTC::Router* GetRouterFromInternal(json& internal) const;
 
-	/* Methods inherited from Channel::lUnixStreamSocket::Listener. */
+	/* Methods inherited from Channel::Channel::Listener. */
 public:
-	void OnChannelRequest(Channel::UnixStreamSocket* channel, Channel::Request* request) override;
-	void OnChannelClosed(Channel::UnixStreamSocket* channel) override;
+	void OnChannelRequest(Channel::Channel* channel, Channel::Request* request) override;
+	void OnChannelClosed(Channel::Channel* channel) override;
 
-	/* Methods inherited from PayloadChannel::lUnixStreamSocket::Listener. */
+	/* Methods inherited from PayloadChannel::UnixStreamSocket::Listener. */
 public:
 	void OnPayloadChannelNotification(
-	  PayloadChannel::UnixStreamSocket* payloadChannel,
+	  PayloadChannel::Channel* payloadChannel,
 	  PayloadChannel::Notification* notification) override;
 	void OnPayloadChannelRequest(
-	  PayloadChannel::UnixStreamSocket* payloadChannel, PayloadChannel::Request* request) override;
-	void OnPayloadChannelClosed(PayloadChannel::UnixStreamSocket* payloadChannel) override;
+	  PayloadChannel::Channel* payloadChannel, PayloadChannel::Request* request) override;
+	void OnPayloadChannelClosed(PayloadChannel::Channel* payloadChannel) override;
 
 	/* Methods inherited from SignalsHandler::Listener. */
 public:
@@ -50,8 +50,8 @@ public:
 
 private:
 	// Passed by argument.
-	Channel::UnixStreamSocket* channel{ nullptr };
-	PayloadChannel::UnixStreamSocket* payloadChannel{ nullptr };
+	Channel::Channel* channel{ nullptr };
+	PayloadChannel::Channel* payloadChannel{ nullptr };
 	// Allocated by this.
 	SignalsHandler* signalsHandler{ nullptr };
 	std::unordered_map<std::string, RTC::Router*> mapRouters;

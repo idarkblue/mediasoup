@@ -10,7 +10,7 @@
 
 /* Instance methods. */
 
-Worker::Worker(::Channel::UnixStreamSocket* channel, PayloadChannel::UnixStreamSocket* payloadChannel)
+Worker::Worker(::Channel::Channel* channel, PayloadChannel::Channel* payloadChannel)
   : channel(channel), payloadChannel(payloadChannel)
 {
 	MS_TRACE();
@@ -30,10 +30,6 @@ Worker::Worker(::Channel::UnixStreamSocket* channel, PayloadChannel::UnixStreamS
 
 	// Tell the Node process that we are running.
 	Channel::Notifier::Emit(std::to_string(Logger::pid), "running");
-
-	MS_DEBUG_DEV("starting libuv loop");
-	DepLibUV::RunLoop();
-	MS_DEBUG_DEV("libuv loop ended");
 }
 
 Worker::~Worker()
@@ -188,7 +184,7 @@ RTC::Router* Worker::GetRouterFromInternal(json& internal) const
 	return router;
 }
 
-inline void Worker::OnChannelRequest(Channel::UnixStreamSocket* /*channel*/, Channel::Request* request)
+inline void Worker::OnChannelRequest(Channel::Channel* /*channel*/, Channel::Request* request)
 {
 	MS_TRACE();
 
@@ -273,7 +269,7 @@ inline void Worker::OnChannelRequest(Channel::UnixStreamSocket* /*channel*/, Cha
 	}
 }
 
-inline void Worker::OnChannelClosed(Channel::UnixStreamSocket* /*socket*/)
+inline void Worker::OnChannelClosed(Channel::Channel* /*socket*/)
 {
 	MS_TRACE_STD();
 
@@ -285,7 +281,7 @@ inline void Worker::OnChannelClosed(Channel::UnixStreamSocket* /*socket*/)
 }
 
 inline void Worker::OnPayloadChannelNotification(
-  PayloadChannel::UnixStreamSocket* /*payloadChannel*/, PayloadChannel::Notification* notification)
+  PayloadChannel::Channel* /*payloadChannel*/, PayloadChannel::Notification* notification)
 {
 	MS_TRACE();
 
@@ -298,7 +294,7 @@ inline void Worker::OnPayloadChannelNotification(
 }
 
 inline void Worker::OnPayloadChannelRequest(
-  PayloadChannel::UnixStreamSocket* /*payloadChannel*/, PayloadChannel::Request* request)
+  PayloadChannel::Channel* /*payloadChannel*/, PayloadChannel::Request* request)
 {
 	MS_TRACE();
 
@@ -313,7 +309,7 @@ inline void Worker::OnPayloadChannelRequest(
 	router->HandleRequest(request);
 }
 
-inline void Worker::OnPayloadChannelClosed(PayloadChannel::UnixStreamSocket* /*payloadChannel*/)
+inline void Worker::OnPayloadChannelClosed(PayloadChannel::Channel* /*payloadChannel*/)
 {
 	MS_TRACE();
 

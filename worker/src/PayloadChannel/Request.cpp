@@ -5,7 +5,7 @@
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
 #include "Utils.hpp"
-#include "PayloadChannel/UnixStreamSocket.hpp"
+#include "PayloadChannel/Channel.hpp"
 
 namespace PayloadChannel
 {
@@ -38,7 +38,7 @@ namespace PayloadChannel
 
 	/* Instance methods. */
 
-	Request::Request(PayloadChannel::UnixStreamSocket* channel, json& jsonRequest) : channel(channel)
+	Request::Request(Channel* channel, json& jsonRequest) : channel(channel)
 	{
 		MS_TRACE();
 

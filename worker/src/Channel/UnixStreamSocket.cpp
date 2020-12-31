@@ -33,13 +33,6 @@ namespace Channel
 		MS_TRACE_STD();
 	}
 
-	void UnixStreamSocket::SetListener(Listener* listener)
-	{
-		MS_TRACE_STD();
-
-		this->listener = listener;
-	}
-
 	void UnixStreamSocket::Send(json& jsonMessage)
 	{
 		MS_TRACE_STD();
@@ -112,7 +105,7 @@ namespace Channel
 			std::string strMsg(msg, msg + msgLen);
 			MS_DEBUG_TAG(rtp, "channel recv %s", strMsg.c_str());
 			json jsonMessage = json::parse(msg, msg + msgLen);
-			auto* request    = new Channel::Request(this, jsonMessage);
+			auto* request    = new Request(this, jsonMessage);
 
 			// Notify the listener.
 			try

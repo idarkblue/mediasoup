@@ -36,13 +36,6 @@ namespace PayloadChannel
 		delete this->ongoingNotification;
 	}
 
-	void UnixStreamSocket::SetListener(Listener* listener)
-	{
-		MS_TRACE();
-
-		this->listener = listener;
-	}
-
 	void UnixStreamSocket::Send(json& jsonMessage, const uint8_t* payload, size_t payloadLen)
 	{
 		MS_TRACE();

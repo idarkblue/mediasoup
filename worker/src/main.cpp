@@ -138,6 +138,10 @@ int main(int argc, char* argv[])
 		// Run the Worker.
 		Worker worker(channel, payloadChannel);
 
+		MS_DEBUG_DEV("starting libuv loop");
+		DepLibUV::RunLoop();
+		MS_DEBUG_DEV("libuv loop ended");
+
 		// Free static stuff.
 		DepLibUV::ClassDestroy();
 		DepLibSRTP::ClassDestroy();
