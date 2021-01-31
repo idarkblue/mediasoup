@@ -48,6 +48,7 @@ void Settings::SetConfiguration(int argc, char* argv[])
 	// clang-format off
 	struct option options[] =
 	{
+		{ "confile",            optional_argument, nullptr, 'f' },
 		{ "logLevel",            optional_argument, nullptr, 'l' },
 		{ "logTags",             optional_argument, nullptr, 't' },
 		{ "rtcMinPort",          optional_argument, nullptr, 'm' },
@@ -70,6 +71,13 @@ void Settings::SetConfiguration(int argc, char* argv[])
 
 		switch (c)
 		{
+			case 'f':
+			{
+				Settings::configuration.confile = std::string(optarg);
+
+				break;
+			}
+
 			case 'l':
 			{
 				stringValue = std::string(optarg);

@@ -1,0 +1,78 @@
+.hidden {
+    display: none;
+}
+
+body {
+    background-color: #333;
+    color: #fff;
+    font-family: 'Roboto', 'Open Sans', 'Lucida Grande', sans-serif;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.control {
+    width: 100%;
+    height: 30px;
+    background-color: #ccc;
+    display: flex;
+    display: -webkit-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+footer > div {
+    background-color: black;
+    bottom: 0;
+    color: white;
+    display: none;
+    font-size: .9em;
+    font-weight: 300;
+    line-height: 2em;
+    max-height: 80%;
+    opacity: 0;
+    overflow-y: auto;
+    padding: 10px;
+    position: absolute;
+    transition: opacity 1s;
+    width: calc(100% - 20px);
+}
+
+footer > div.active {
+    display: block;
+    opacity: .8;
+}
+
+html {
+    height: 100%;
+    margin: 0;
+    width: 100%;
+}
+.hidden {
+    background-color: transparent;
+    /*border-color: 2px solid blue;*/
+}
+
+.boxCommon {
+    position:absolute;
+}
+
+.thumbCommon {
+    z-index:2;
+    /*box-shadow: 5px 5px 5px #000000;*/
+}
+
+.peerLabel {
+    color: #fff;
+    font-size: 2.5vw;
+    max-width: 30%;
+    opacity: .7;
+    overflow: hidden;
+    padding: 4px;
+    position: absolute;
+    text-overflow: ellipsis;
+    text-shadow: 0 0 4px #000;
+    white-space: nowrap;
+    z-index: 8;
+}

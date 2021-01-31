@@ -32,6 +32,7 @@ public:
 	// Struct holding the configuration.
 	struct Configuration
 	{
+		std::string confile{ "" };
 		LogLevel logLevel{ LogLevel::LOG_ERROR };
 		struct LogTags logTags;
 		uint16_t rtcMinPort{ 10000u };

@@ -400,6 +400,29 @@ public:
 	} \
 	while (false)
 
+#define MS_INFO(desc, ...) \
+	do \
+	{ \
+		if (Settings::configuration.logLevel >= LogLevel::LOG_INFO || MS_LOG_DEV_LEVEL >= 1) \
+		{ \
+			int loggerWritten = std::snprintf(Logger::buffer, Logger::bufferSize, "I" _MS_LOG_STR_DESC desc, _MS_LOG_ARG, ##__VA_ARGS__); \
+			if (Logger::channel) Logger::channel->SendLog(Logger::buffer, loggerWritten); \
+		} \
+	} \
+	while (false)
+
+
+#define MS_DEBUG(desc, ...) \
+	do \
+	{ \
+		if (Settings::configuration.logLevel >= LogLevel::LOG_DEBUG || MS_LOG_DEV_LEVEL >= 1) \
+		{ \
+			int loggerWritten = std::snprintf(Logger::buffer, Logger::bufferSize, "D" _MS_LOG_STR_DESC desc, _MS_LOG_ARG, ##__VA_ARGS__); \
+			if (Logger::channel) Logger::channel->SendLog(Logger::buffer, loggerWritten); \
+		} \
+	} \
+	while (false)
+
 #define MS_ERROR_STD(desc, ...) \
 	do \
 	{ \

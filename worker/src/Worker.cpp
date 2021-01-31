@@ -16,10 +16,14 @@ Worker::Worker(::Channel::Channel* channel, PayloadChannel::Channel* payloadChan
 	MS_TRACE();
 
 	// Set us as Channel's listener.
-	this->channel->SetListener(this);
+	if (this->channel) {
+		this->channel->SetListener(this);
+	}
 
 	// Set us as PayloadChannel's listener.
-	this->payloadChannel->SetListener(this);
+	if (this->payloadChannel) {
+		this->payloadChannel->SetListener(this);
+	}
 
 	// Set the signals handler.
 	this->signalsHandler = new SignalsHandler(this);
@@ -62,10 +66,14 @@ void Worker::Close()
 	this->mapRouters.clear();
 
 	// Close the Channel.
-	delete this->channel;
+	if (this->channel) {
+		delete this->channel;
+	}
 
 	// Close the PayloadChannel.
-	delete this->payloadChannel;
+	if (this->payloadChannel) {
+		delete this->payloadChannel;
+	}
 }
 
 void Worker::FillJson(json& jsonObject) const
