@@ -1097,7 +1097,7 @@ int RtcSession::FillOffer(std::string &sdp)
     jsonSdp["groups"].push_back(jsonGroup);
 
     jsonSdp["msidSemantic"]["semantic"] = "WMS";
-    jsonSdp["msidSemantic"]["token"] = OfferMslabel;
+    jsonSdp["msidSemantic"]["token"] = "*";
     jsonSdp["name"] = "-";
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;
@@ -1374,7 +1374,7 @@ int RtcSession::FillAnswer(std::string &sdp)
     jsonSdp["groups"].push_back(jsonGroup);
 
     jsonSdp["msidSemantic"]["semantic"] = "WMS";
-//    jsonSdp["msidSemantic"]["token"] = "*";
+    jsonSdp["msidSemantic"]["token"] = "*";
     jsonSdp["name"] = "-";
     jsonSdp["origin"]["address"] = "0.0.0.0";
     jsonSdp["origin"]["ipVer"] = 4;

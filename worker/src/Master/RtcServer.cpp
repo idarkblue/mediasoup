@@ -353,6 +353,8 @@ int RtcServer::PlayStream(RtcRequest *request)
 
     ctx->state = Context::State::SETUP;
 
+    request->count++;
+
     return 0;
 }
 
