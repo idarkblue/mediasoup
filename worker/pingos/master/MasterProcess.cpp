@@ -118,7 +118,7 @@ int MasterProcess::Send2Subprocess(uint32_t slot, std::string payload)
     return 0;
 }
 
-void MasterProcess::OnSubprocessExited(Subprocess * sp)
+void MasterProcess::OnSubprocessExited(SubprocessAgent * sp)
 {
 
 }

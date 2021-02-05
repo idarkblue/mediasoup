@@ -7,6 +7,7 @@ make && make master
 ```
 
 2. 修改配置
+
 ```json
 {
     "log": {
@@ -104,7 +105,6 @@ make && make master
 ```bash
 ./out/Release/mediasoup-master conf/pms.conf
 ```
-
 
 # 信令部分
 
@@ -387,10 +387,18 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 ```
 
 ## 停止录制
+
 ```json
 {
     "stream": "123456",
     "method":"record.stop",
     "data": {}
 }
+```
+
+```mermaid
+graph LR
+hk((香港)) --- sh(上海)
+hk --- ger(德国)
+sh --- ger
 ```

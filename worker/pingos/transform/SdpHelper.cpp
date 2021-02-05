@@ -4,7 +4,7 @@
 #include "SdpHelper.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
-#include "sdp/sdptransform.hpp"
+#include "transform/sdptransform.hpp"
 #include "utils/StringHelper.hpp"
 
 namespace pingos
@@ -70,18 +70,21 @@ namespace pingos
             JSON_THROW_READ_VALUE(jsonMedia, "iceOptions", std::string, string, parameter.ice.options);
 
             // candidates
-            json jsonCandidates;
-            JSON_THROW_READ_ARRAY(jsonMedia, "candidates", jsonCandidates);
-            for (auto &jsonCandidate : jsonCandidates) {
-                WebRtcConnect::Candidate candidate;
-                JSON_THROW_READ_VALUE(jsonCandidate, "foundation", std::string, string, candidate.foundation);
-                JSON_THROW_READ_VALUE(jsonCandidate, "ip", std::string, string, candidate.ip);
-                JSON_THROW_READ_VALUE(jsonCandidate, "port", uint16_t, number, candidate.port);
-                JSON_THROW_READ_VALUE(jsonCandidate, "priority", uint64_t, number, candidate.priority);
-                JSON_THROW_READ_VALUE(jsonCandidate, "transport", std::string, string, candidate.protocol);
-                JSON_THROW_READ_VALUE(jsonCandidate, "type", std::string, string, candidate.type);
-                JSON_THROW_READ_VALUE(jsonCandidate, "component", uint32_t, number, candidate.component);
-                parameter.candidates.push_back(candidate);
+            auto jsonCandidatesIt = jsonMedia.find("candidates");
+            if (jsonCandidatesIt != jsonMedia.end() && jsonCandidatesIt->is_array()) {
+
+                json &jsonCandidates = *jsonCandidatesIt;
+                for (auto &jsonCandidate : jsonCandidates) {
+                    WebRtcConnect::Candidate candidate;
+                    JSON_THROW_READ_VALUE(jsonCandidate, "foundation", std::string, string, candidate.foundation);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "ip", std::string, string, candidate.ip);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "port", uint16_t, number, candidate.port);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "priority", uint32_t, number, candidate.priority);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "transport", std::string, string, candidate.protocol);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "type", std::string, string, candidate.type);
+                    JSON_THROW_READ_VALUE(jsonCandidate, "component", uint32_t, number, candidate.component);
+                    parameter.candidates.push_back(candidate);
+                }
             }
 
             JSON_THROW_READ_VALUE(jsonMedia, "mid", std::string, string, parameter.mid);
@@ -123,9 +126,7 @@ namespace pingos
             conn.candidates.emplace_back();
             auto &candidate = conn.candidates[conn.candidates.size() - 1];
             JSON_THROW_READ_VALUE(jsonIceCandidate, "foundation", std::string, string, candidate.foundation);
-            std::string priority;
-            JSON_THROW_READ_VALUE(jsonIceCandidate, "priority", std::string, string, priority);
-            candidate.priority = std::atoi(priority.c_str());
+            JSON_THROW_READ_VALUE(jsonIceCandidate, "priority", uint32_t, number, candidate.priority);
             JSON_THROW_READ_VALUE(jsonIceCandidate, "ip", std::string, string, candidate.ip);
             JSON_THROW_READ_VALUE(jsonIceCandidate, "protocol", std::string, string, candidate.protocol);
             JSON_THROW_READ_VALUE(jsonIceCandidate, "port", uint16_t, number, candidate.port);
@@ -146,9 +147,9 @@ namespace pingos
         JSON_THROW_READ_ARRAY(jsonSdp, "media", jsonMedias);
 
         tracks.reserve(jsonMedias.size());
-        int i = 0;
         for (auto &jsonMedia : jsonMedias) {
-            Track &track = tracks[i];
+            tracks.emplace_back();
+            Track &track = tracks[tracks.size() - 1];
             RTC::RtpParameters &rtpParameters = track.rtpParameters;
 
             std::string type, direction, mid;
@@ -192,8 +193,6 @@ namespace pingos
             track.direction   = direction;
             track.kind        = RTC::Media::GetKind(type);
             track.trackId     = trackId;
-
-            i++;
         }
 
         return 0;

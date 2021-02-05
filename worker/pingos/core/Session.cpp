@@ -3,7 +3,8 @@
 
 namespace pingos
 {
-    Session::Session(std::string streamId, std::string sessionId, bool publisher)
+    Session::Session(std::string streamId, std::string sessionId, bool publisher) :
+        streamId(streamId), sessionId(sessionId), publisher(publisher)
     {
 
     }
@@ -21,7 +22,7 @@ namespace pingos
     void* Session::GetContext(std::string moduleName)
     {
         auto it = this->ctxMap.find(moduleName);
-        if (it != this->ctxMap.end()) {
+        if (it == this->ctxMap.end()) {
             return nullptr;
         }
 

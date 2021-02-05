@@ -10,8 +10,8 @@ namespace pingos
         virtual ~PMSMasterProcess() = default;
 
     protected:
-        Subprocess* NewSubprocess(uv_loop_t *loop) override;
-        void DeleteSubprocess(Subprocess *subprocess) override;
+        SubprocessAgent* NewSubprocess(uv_loop_t *loop) override;
+        void DeleteSubprocess(SubprocessAgent *subprocess) override;
 
     };
 } // namespace pingos

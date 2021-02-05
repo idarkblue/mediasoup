@@ -3,6 +3,9 @@
 
 #include <string>
 #include <vector>
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 namespace pingos {
 
@@ -73,6 +76,14 @@ struct PullConfiguration {
     std::vector<ServerInfo> servers;
 };
 
+struct WebRtcTransportConfiguration {
+    json jsonData;
+};
+
+struct PlainTransportConfiguration {
+    json jsonData;
+};
+
 class Configuration
 {
 public:
@@ -91,6 +102,8 @@ public:
     static WebRtcConfiguration webrtc;
     static RecordConfiguration record;
     static PullConfiguration pull;
+    static WebRtcTransportConfiguration webRtcTransport;
+    static PlainTransportConfiguration plainTransport;
 
 public:
     static std::string filePath;

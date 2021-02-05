@@ -22,14 +22,14 @@ namespace pingos
         _IT_ = *_ROOT_.find((_KEY_));
 
     #define JSON_THROW_READ_ARRAY(_ROOT_, _KEY_, _IT_)                                               \
-        if (_ROOT_.find((_KEY_)) == _ROOT_.end() && !_ROOT_.find((_KEY_))->is_array()) {             \
+        if (_ROOT_.find((_KEY_)) == _ROOT_.end() || !_ROOT_.find((_KEY_))->is_array()) {             \
             MS_ERROR("missing object [%s]", std::string(_KEY_).c_str());                             \
             MS_THROW_ERROR("missing object [%s]", std::string(_KEY_).c_str());                       \
         }                                                                                            \
         _IT_ = *_ROOT_.find((_KEY_))
 
     #define JSON_DEFAULT_READ_VALUE(_ROOT_, _KEY_, _TYPE_, _JSON_TYPE_, _VALUE_, _DEFAULT_)          \
-        if (_ROOT_.find((_KEY_)) == _ROOT_.end() && _ROOT_.find((_KEY_))->is_##_JSON_TYPE_()) {      \
+        if (_ROOT_.find((_KEY_)) != _ROOT_.end() && _ROOT_.find((_KEY_))->is_##_JSON_TYPE_()) {      \
             _VALUE_ = _ROOT_.find((_KEY_))->get<_TYPE_>();                                           \
         } else {                                                                                     \
             _VALUE_ = _DEFAULT_;                                                                     \

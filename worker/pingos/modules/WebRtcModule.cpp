@@ -23,7 +23,7 @@ namespace pingos
         { "session.heartbeat", WebRtcModule::Request::MethodId::SESSION_HEARTBEAT }
     };
 
-    WebRtcModule::Request::Request(NetConnection *nc, json &jsonObject)
+    WebRtcModule::Request::Request(NetConnection *nc, json &jsonObject): nc(nc)
     {
         JSON_THROW_READ_VALUE(jsonObject, "method", std::string, string, this->method);
         JSON_READ_VALUE_DEFAULT(jsonObject, "session", std::string, this->session, "");
@@ -249,11 +249,10 @@ namespace pingos
         }
 
         try {
-            // may throw
-            SdpHelper::Transform2WebRtcTransportJson((*ctx->remoteConns.get())[0], jsonRemoteConn);
+            auto *stream = FetchStream(s->GetStreamId());
 
             // may throw
-            ConsoleFilter::CreateWebRtcTransport(s, s->GetStreamId(), jsonRemoteConn, jsonResponse);
+            ConsoleFilter::CreateWebRtcTransport(s, ctx->transportId, Configuration::webRtcTransport.jsonData, jsonResponse);
 
             // my throw
             SdpHelper::ParseWebRtcTransport(jsonResponse, localConn);
@@ -278,6 +277,9 @@ namespace pingos
             jsonSdp["sdp"] = sdp;
 
             ctx->r->Accept(jsonSdp);
+
+            stream->JoinSession(s);
+
         } catch (const MediaSoupError &error) {
             if (ctx->r) {
                 ctx->r->Error(error.what());
@@ -358,6 +360,10 @@ next:
 
             // maybe throw
             SdpHelper::ParseTracks(sdp, *tracks.get());
+            if (tracks->size() == 0) {
+                MS_THROW_ERROR("Stream[%s] Session[%s] has no tracks",
+                    r->stream.c_str(), s->GetSessionId().c_str());
+            }
             // maybe throw
             SdpHelper::ParseWebRtcConnect(sdp, *conns.get());
 
@@ -371,11 +377,10 @@ next:
             ctx->tracks = tracks;
             ctx->remoteConns = conns;
 
+            ctx->r = r;
+            r->count++;
             if (PublishFunctional) {
                 if (PublishFunctional(s) != 0) {
-                    ctx->r = r;
-                    r->count++;
-
                     return;
                 }
             }

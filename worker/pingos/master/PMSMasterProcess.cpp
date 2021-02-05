@@ -4,12 +4,12 @@
 
 namespace pingos
 {
-    Subprocess* PMSMasterProcess::NewSubprocess(uv_loop_t *loop)
+    SubprocessAgent* PMSMasterProcess::NewSubprocess(uv_loop_t *loop)
     {
         return new PMSSubprocess(loop);
     }
 
-    void PMSMasterProcess::DeleteSubprocess(Subprocess *subprocess)
+    void PMSMasterProcess::DeleteSubprocess(SubprocessAgent *subprocess)
     {
         delete (PMSSubprocess*) subprocess;
     }

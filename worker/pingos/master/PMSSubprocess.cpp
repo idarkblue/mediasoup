@@ -2,7 +2,7 @@
 
 namespace pingos
 {
-    PMSSubprocess::PMSSubprocess(uv_loop_t *loop) : Subprocess(loop)
+    PMSSubprocess::PMSSubprocess(uv_loop_t *loop) : SubprocessAgent(loop)
     {
 
     }

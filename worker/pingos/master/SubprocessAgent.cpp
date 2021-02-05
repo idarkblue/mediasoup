@@ -1,24 +1,24 @@
-#define PMS_CLASS "pingos::Subprocess"
-#define MS_CLASS "pingos::Subprocess"
+#define PMS_CLASS "pingos::SubprocessAgent"
+#define MS_CLASS "pingos::SubprocessAgent"
 
 #include "logger/Log.hpp"
 #include "core/Configuration.hpp"
-#include "Subprocess.hpp"
+#include "SubprocessAgent.hpp"
 
 namespace pingos {
 
 static char MEDIASOUP_VERSION_STRING[] = "MEDIASOUP_VERSION=3.6.24";
 
-Subprocess::Subprocess(uv_loop_t *loop) :
+SubprocessAgent::SubprocessAgent(uv_loop_t *loop) :
     loop(loop), channelPipe(loop), payloadChannelPipe(loop)
 {
 }
 
-Subprocess::~Subprocess()
+SubprocessAgent::~SubprocessAgent()
 {
 }
 
-int Subprocess::InitChannels()
+int SubprocessAgent::InitChannels()
 {
     this->channelIn = new pingos::UnixStreamSocket(&this->channelPipe.parentIn, this, ::UnixStreamSocket::Role::CONSUMER);
     this->channelOut = new pingos::UnixStreamSocket(&this->channelPipe.parentOut, this, ::UnixStreamSocket::Role::PRODUCER);
@@ -29,7 +29,7 @@ int Subprocess::InitChannels()
     return 0;
 }
 
-int Subprocess::Start(int slot, std::string file)
+int SubprocessAgent::Start(int slot, std::string file)
 {
     this->slot = slot;
     this->file = file;
@@ -87,7 +87,7 @@ int Subprocess::Start(int slot, std::string file)
     return this->Spawn();
 }
 
-int Subprocess::Spawn()
+int SubprocessAgent::Spawn()
 {
     env[0] = MEDIASOUP_VERSION_STRING;
     env[1] = nullptr;
@@ -117,7 +117,7 @@ int Subprocess::Spawn()
     this->options.stdio_count = 7;// sizeof(childStdio) / sizeof(uv_stdio_container_t);
 
     this->options.exit_cb = [](uv_process_t *req, int64_t status, int termSignal) {
-        auto me = static_cast<Subprocess*>(req->data);
+        auto me = static_cast<SubprocessAgent*>(req->data);
         me->OnSubprocessExited(req, status, termSignal);
     };
     this->options.file = this->file.c_str();
@@ -155,15 +155,15 @@ int Subprocess::Spawn()
     return 0;
 }
 
-void Subprocess::OnSubprocessExited(uv_process_t *req, int64_t status, int termSignal)
+void SubprocessAgent::OnSubprocessExited(uv_process_t *req, int64_t status, int termSignal)
 {
-    PMS_ERROR("Subprocess process[{}] exited\r\n", req->pid);
+    PMS_ERROR("SubprocessAgent process[{}] exited\r\n", req->pid);
     if (this->listener) {
         this->listener->OnSubprocessExited(this);
     }
 }
 
-void Subprocess::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload)
+void SubprocessAgent::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string_view &payload)
 {
     switch (payload[0]) {
         // 123 = '{' (a Channel JSON messsage).
@@ -207,18 +207,18 @@ void Subprocess::OnChannelMessage(pingos::UnixStreamSocket* channel, std::string
     }
 }
 
-void Subprocess::OnChannelClosed(pingos::UnixStreamSocket* channel)
+void SubprocessAgent::OnChannelClosed(pingos::UnixStreamSocket* channel)
 {
 
 }
 
-int Subprocess::ChannelSend(std::string data)
+int SubprocessAgent::ChannelSend(std::string data)
 {
     if (this->channelOut) {
         this->channelOut->SendString(data);
-        PMS_DEBUG("[Subprocess-{} {}] Send Data: {}", this->slot, this->process.pid, data);
+        PMS_DEBUG("[SubprocessAgent-{} {}] Send Data: {}", this->slot, this->process.pid, data);
     } else {
-        PMS_ERROR("[Subprocess-{} {}] channel ptr is null", this->slot, this->process.pid);
+        PMS_ERROR("[SubprocessAgent-{} {}] channel ptr is null", this->slot, this->process.pid);
     }
 
     return 0;

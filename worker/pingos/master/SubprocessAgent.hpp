@@ -10,17 +10,17 @@
 
 namespace pingos {
 
-class Subprocess : public UnixStreamSocket::Listener
+class SubprocessAgent : public UnixStreamSocket::Listener
 {
 public:
     class Listener {
     public:
-        virtual void OnSubprocessExited(Subprocess *w) = 0;
+        virtual void OnSubprocessExited(SubprocessAgent *w) = 0;
     };
 
 public:
-    Subprocess(uv_loop_t *loop);
-    virtual ~Subprocess();
+    SubprocessAgent(uv_loop_t *loop);
+    virtual ~SubprocessAgent();
 
     int Start(int slot, std::string file);
     int SetListener(Listener *listener);

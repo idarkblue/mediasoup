@@ -200,7 +200,7 @@ namespace pingos {
 
     void WssServer::OnMessage(NetConnection *nc, std::string_view message, uWS::OpCode opCode)
     {
-        MS_DEBUG("WS Connection ptr %p, message %.*s, opCode %d ...", (void*)nc, message.length(), message.data(), (int) opCode);
+        MS_DEBUG("WS Connection ptr %p, message %.*s, opCode %d ...", (void*)nc, (int)message.length(), message.data(), (int) opCode);
 
         if (nc == nullptr) {
             MS_ERROR("Fetch nc failed.");

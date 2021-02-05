@@ -14,11 +14,11 @@
 #include <vector>
 #include "uv.h"
 
-#include "Subprocess.hpp"
+#include "SubprocessAgent.hpp"
 
 namespace pingos {
 
-class MasterProcess : public Subprocess::Listener
+class MasterProcess : public SubprocessAgent::Listener
 {
 public:
     static uv_loop_t  *Loop;
@@ -43,19 +43,19 @@ protected:
     int Send2Subprocess(uint32_t slot, std::string payload);
 
 protected:
-    virtual Subprocess* NewSubprocess(uv_loop_t *loop) = 0;
-    virtual void DeleteSubprocess(Subprocess *subprocess) = 0;
+    virtual SubprocessAgent* NewSubprocess(uv_loop_t *loop) = 0;
+    virtual void DeleteSubprocess(SubprocessAgent *subprocess) = 0;
 
-// Subprocess process listener
+// SubprocessAgent process listener
 public:
-    virtual void OnSubprocessExited(Subprocess *) override;
+    virtual void OnSubprocessExited(SubprocessAgent *) override;
 
 protected:
     uint32_t                           processNum { 0 };
     std::string                        execDir { "./" };
     std::string                        subprocessFile { "" };
     std::string                        subprocessName { "" };
-    std::map<uint32_t, Subprocess*>    slotMap;
+    std::map<uint32_t, SubprocessAgent*>    slotMap;
 };
 
 }

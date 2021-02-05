@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Subprocess.hpp"
+#include "SubprocessAgent.hpp"
 
 namespace pingos
 {
-    class PMSSubprocess : public Subprocess {
+    class PMSSubprocess : public SubprocessAgent {
     public:
         PMSSubprocess() = default;
         PMSSubprocess(uv_loop_t *loop);

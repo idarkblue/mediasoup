@@ -344,7 +344,7 @@
         'pingos/master/PMSMasterProcess.cpp',
         'pingos/master/PMSSubprocess.cpp',
         'pingos/master/MasterProcess.cpp',
-        'pingos/master/Subprocess.cpp',
+        'pingos/master/SubprocessAgent.cpp',
         'pingos/master/Pipe.cpp',
         'pingos/master/UnixStreamSocket.cpp',
         'pingos/logger/Log.cpp',

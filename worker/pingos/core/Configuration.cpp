@@ -8,8 +8,6 @@
 
 #define MS_CLASS "pingos::Configuration"
 
-using json = nlohmann::json;
-
 namespace pingos{
 
 LogConfiguration       Configuration::log;
@@ -20,6 +18,8 @@ MasterConfiguration    Configuration::master;
 WebRtcConfiguration    Configuration::webrtc;
 RecordConfiguration    Configuration::record;
 PullConfiguration      Configuration::pull;
+WebRtcTransportConfiguration Configuration::webRtcTransport;
+PlainTransportConfiguration Configuration::plainTransport;
 
 std::string Configuration::filePath;
 
@@ -170,6 +170,8 @@ int Configuration::Load()
             }
         }
 
+        JSON_THROW_READ_OBJECT(jsonObject, "webRtcTransportOptions", webRtcTransport.jsonData);
+        JSON_THROW_READ_OBJECT(jsonObject, "plainTransportOptions", plainTransport.jsonData);
     } catch (const json::parse_error &error) {
         in.close();
         MS_THROW_ERROR("Invalid configuration file, Parse Setting file[%s] failed, reason %s.\r\n",
