@@ -308,7 +308,7 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
     plainTransportParameters.listenIp = Configuration::webrtc.listenIp;
     plainTransportParameters.comedia = false;
     plainTransportParameters.rtcpMux = true;
-    plainTransportParameters.srtpCryptoSuite = false;
+//    plainTransportParameters.srtpCryptoSuite = false;
     plainTransportParameters.trackId = track.id;
 
     ctx->s->CreatePlainTransport(plainTransportParameters);

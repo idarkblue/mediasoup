@@ -1,12 +1,19 @@
 # 编译安装
 
-1. 编译过程
+## 1. 编译过程
 
 ```bash
 make && make master
 ```
 
-2. 修改配置
+## 2. 生成安装包
+
+```bash
+./rpm.sh 1.0.1 pms
+```
+
+## 2. 修改配置
+
 ```json
 {
     "log": {
@@ -53,7 +60,13 @@ make && make master
         "recordPath": "./record/",
         "execRecordDone": "",
         "cmdPort": 8888
-    }
+    },
+
+    "pull":
+        [
+            {"ip": "xxx", "port": 8554},
+            {"ip": "xxx", "port": 8554}
+        ]
 }
 
 ```
@@ -99,11 +112,9 @@ make && make master
     - execRecordDone: 录制文件生成后如果还需要做后续的处理则在此处填写shell命令
     - cmdPort: 录制控制端口
 
-3. 启动
-
-```bash
-./out/Release/mediasoup-master conf/pms.conf
-```
+- pull
+    - ip: 需要互联的sfu ip
+    - port: 需要互联的sfu port
 
 
 # 信令部分
@@ -376,6 +387,7 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 # 3. 录制
 
 ## 开始录制
+
 ```json
 {
     "stream": "123456",
@@ -387,6 +399,7 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 ```
 
 ## 停止录制
+
 ```json
 {
     "stream": "123456",

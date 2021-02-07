@@ -493,8 +493,10 @@ void RtcServer::OnRtspClientError(RtspClient *client, RtspClient::RtspClientErro
 {
     auto *rtcSession = client->GetRtcSession();
 
-    PMS_INFO("StreamId[{}] rtsp client[{}] error code {}",
-        rtcSession->GetStreamId(), client->GetURL(), errorCode);
+    if (rtcSession) {
+        PMS_INFO("StreamId[{}] rtsp client[{}] error code {}",
+            rtcSession->GetStreamId(), client->GetURL(), errorCode);
+    }
 
 //    this->DeleteSession(client->GetRtcSession());
 }
