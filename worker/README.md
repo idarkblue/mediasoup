@@ -6,13 +6,37 @@
 make && make master
 ```
 
-## 2. 生成安装包
+## 2. 生成安装包（rpm包）
 
 ```bash
 ./rpm.sh 1.0.1 pms
 ```
 
-## 2. 修改配置
+rpm安装包在目录`rpmbuild/RPMS`，将rpm包copy到目标机器
+
+## 3. 安装rpm包
+
+```bash
+rpm -ivh xxx.rpm --replacefiles
+```
+
+配置文件路径：`/usr/local/pms/conf/pms.conf`
+
+## 4. 操作
+
+### 4.1 开启服务
+
+```bash
+systemctl start pms
+```
+
+### 4.2 关闭服务
+
+```bash
+systemctl stop pms
+```
+
+## 5. 修改配置
 
 ```json
 {

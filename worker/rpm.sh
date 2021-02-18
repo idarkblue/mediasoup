@@ -77,7 +77,7 @@ cd $RPM_BUILD_DIR
 make && make master
 
 %install
-./install.sh
+./install.sh %{buildroot}
 
 %clean
 
