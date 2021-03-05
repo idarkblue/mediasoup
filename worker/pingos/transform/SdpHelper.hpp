@@ -47,7 +47,7 @@ namespace pingos
             std::string mid { "" };
             std::string direction { "" };
             RTC::RtpParameters rtpParameters;
-            std::string trackId = { "" };
+            std::string trackId { "" };
         };
 
     public:
