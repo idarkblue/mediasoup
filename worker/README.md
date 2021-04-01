@@ -216,7 +216,6 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 {
     "version": "1.0",
     "method": "stream.publish",
-    "uid": "xxx",
     "stream": "xxx",
     "data": {
         "sdp": "xxx"

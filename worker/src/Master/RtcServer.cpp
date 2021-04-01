@@ -268,14 +268,20 @@ int RtcServer::PublishStream(RtcRequest *request)
         return -1;
     }
 
-    if (rtcSession->Publish(sdp) != 0) {
-        PMS_ERROR("SessionId[{}] StreamId[{}] publish failed",
-            rtcSession->GetSessionId(), request->stream);
+    try {
+        if (rtcSession->Publish(sdp) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] publish failed",
+                rtcSession->GetSessionId(), request->stream);
+            this->DeleteSession(rtcSession);
+
+            MS_THROW_ERROR("publish failed");
+
+            return -1;
+        }
+    } catch (const MediaSoupError& error) {
         this->DeleteSession(rtcSession);
 
-        MS_THROW_ERROR("publish failed");
-
-        return -1;
+        MS_THROW_ERROR("publish failed, %s", error.what());
     }
 
     Context *ctx = (Context*) rtcSession->GetContext();
@@ -341,12 +347,18 @@ int RtcServer::PlayStream(RtcRequest *request)
 
     rtcSession->SetProducerParameters(*publisher);
 
-    if (rtcSession->Play(sdp)) {
+    try {
+        if (rtcSession->Play(sdp)) {
+            this->DeleteSession(rtcSession);
+            PMS_ERROR("SessionId[{}] StreamId[{}] play failed",
+                rtcSession->GetSessionId(), request->stream);
+            MS_THROW_ERROR("Play failed");
+            return -1;
+        }
+    } catch (const MediaSoupError& error) {
         this->DeleteSession(rtcSession);
-        PMS_ERROR("SessionId[{}] StreamId[{}] play failed",
-            rtcSession->GetSessionId(), request->stream);
-        MS_THROW_ERROR("Play failed");
-        return -1;
+
+        MS_THROW_ERROR("play failed, %s", error.what());
     }
 
     Context *ctx = (Context*) rtcSession->GetContext();

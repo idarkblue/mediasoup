@@ -3,8 +3,10 @@
 #include "Master/RtcWorker.hpp"
 #include "Channel/Request.hpp"
 #include "Master/sdptransform.hpp"
+#include "MediaSoupErrors.hpp"
 
 #define PMS_CLASS "pingos::RtcSession"
+#define MS_CLASS "pingos::RtcSession"
 
 namespace pingos {
 
@@ -240,6 +242,12 @@ int RtcSession::Publish(std::string sdp)
         return -1;
     }
 
+    if (this->producerParameters.empty()) {
+        MS_THROW_ERROR("SessionId[%s] StreamId[%s] At least one audio and video track exists",
+            this->sessionId.c_str(), this->streamId.c_str());
+        return -1;
+    }
+
     ChannelRequest request;
     if (GenerateRouterRequest("worker.createRouter", request) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] publish failed, generate router request error",
@@ -304,6 +312,12 @@ int RtcSession::Play(std::string sdp)
     if (si.TransformSdp(this->rtcTransportParameters, this->consumerParameters) != 0) {
         PMS_ERROR("SessionId[{}] StreamId[{}] play failed, Transform sdp error",
             this->sessionId, this->streamId);
+        return -1;
+    }
+
+    if (this->consumerParameters.empty()) {
+        MS_THROW_ERROR("SessionId[%s] StreamId[%s], At least one audio and video track exists",
+            this->sessionId.c_str(), this->streamId.c_str());
         return -1;
     }
 

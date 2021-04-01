@@ -26,7 +26,7 @@ mkdir -p ./source/$1
 echo "copying source codes"
 
 cp ./pms.service ./source/$1
-cp -rf ./deps/./source/$1
+cp -rf ./deps/ ./source/$1
 cp -rf ./include ./source/$1
 cp -rf ./src ./source/$1
 cp -rf ./certs ./source/$1
@@ -37,6 +37,7 @@ cp -f *.gypi ./source/$1
 cp -f Makefile ./source/$1
 cp -f compile_commands_template.json ./source/$1
 cp -f install.sh ./source/$1
+cp -f record.conf ./source/$1
 
 cd ./source
 tar -zcvf ./$1.tar.gz $1 --exclude .svn --exclude .git --exclude *.o --exclude *.oclint --exclude *.log --exclude *.pdf --exclude *.doc
@@ -65,19 +66,19 @@ URL:            https://pingos.io/
 Packager:       db
 Group:          Application/Server
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{realease}-root
- 
+
 %description
 The GNU wget program downloads files from the Internet using the command-line.
- 
+
 %prep
 %setup -q -n $version
 cd $RPM_BUILD_DIR
- 
+
 %build
 make && make master
 
 %install
-./install.sh %{buildroot}
+./install.sh %{buildroot} /usr/local/pms
 
 %clean
 
