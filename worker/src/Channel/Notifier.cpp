@@ -9,7 +9,7 @@ namespace Channel
 {
 	/* Class variables. */
 
-	Channel* Notifier::channel{ nullptr };
+	thread_local UnixStreamSocket* Notifier::channel{ nullptr };
 
 	/* Static methods. */
 
@@ -17,7 +17,7 @@ namespace Channel
 	{
 		MS_TRACE();
 
-		Notifier::channel = channel;
+		Notifier::channel = (UnixStreamSocket *) channel;
 	}
 
 	void Notifier::Emit(const std::string& targetId, const char* event)

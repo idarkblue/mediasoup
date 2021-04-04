@@ -74,6 +74,7 @@ namespace PayloadChannel
 		ProducerSocket producerSocket;
 		PayloadChannel::Notification* ongoingNotification{ nullptr };
 		PayloadChannel::Request* ongoingRequest{ nullptr };
+		uint8_t* WriteBuffer;
 	};
 } // namespace PayloadChannel
 

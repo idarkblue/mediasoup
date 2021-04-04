@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include <json.hpp>
 #include <string>
+#include "UnixStreamSocket.hpp"
 
 using json = nlohmann::json;
 
@@ -19,7 +20,7 @@ namespace Channel
 
 	public:
 		// Passed by argument.
-		static Channel* channel;
+		thread_local static UnixStreamSocket* channel;
 	};
 } // namespace Channel
 

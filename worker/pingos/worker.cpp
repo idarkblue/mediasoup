@@ -39,7 +39,7 @@ static constexpr int ProducerChannelFd{ 4 };
 static constexpr int PayloadConsumerChannelFd{ 5 };
 static constexpr int PayloadProducerChannelFd{ 6 };
 
-void IgnoreSignals();
+static void IgnoreSignals();
 
 void ModuleInit()
 {
@@ -175,7 +175,7 @@ int WorkerMain(int argc, char* argv[])
 	}
 }
 
-void IgnoreSignals()
+static void IgnoreSignals()
 {
 #ifndef _WIN32
 	MS_TRACE();

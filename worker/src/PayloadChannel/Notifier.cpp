@@ -9,7 +9,7 @@ namespace PayloadChannel
 {
 	/* Class variables. */
 
-	PayloadChannel::Channel* Notifier::payloadChannel{ nullptr };
+	thread_local UnixStreamSocket* Notifier::payloadChannel{ nullptr };
 
 	/* Static methods. */
 
@@ -17,7 +17,7 @@ namespace PayloadChannel
 	{
 		MS_TRACE();
 
-		Notifier::payloadChannel = payloadChannel;
+		Notifier::payloadChannel = (UnixStreamSocket *) payloadChannel;
 	}
 
 	void Notifier::Emit(

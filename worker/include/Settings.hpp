@@ -52,7 +52,7 @@ private:
 	static void SetDtlsCertificateAndPrivateKeyFiles();
 
 public:
-	static struct Configuration configuration;
+	thread_local static struct Configuration configuration;
 
 private:
 	static std::map<std::string, LogLevel> string2LogLevel;

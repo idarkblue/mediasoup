@@ -186,7 +186,6 @@ void TcpConnection::Write(const uint8_t* data, size_t len, TcpConnection::onSend
 		if (cb)
 		{
 			(*cb)(false);
-
 			delete cb;
 		}
 
@@ -198,7 +197,6 @@ void TcpConnection::Write(const uint8_t* data, size_t len, TcpConnection::onSend
 		if (cb)
 		{
 			(*cb)(false);
-
 			delete cb;
 		}
 
@@ -220,7 +218,6 @@ void TcpConnection::Write(const uint8_t* data, size_t len, TcpConnection::onSend
 		if (cb)
 		{
 			(*cb)(true);
-
 			delete cb;
 		}
 
@@ -284,7 +281,6 @@ void TcpConnection::Write(
 		if (cb)
 		{
 			(*cb)(false);
-
 			delete cb;
 		}
 
@@ -296,7 +292,6 @@ void TcpConnection::Write(
 		if (cb)
 		{
 			(*cb)(false);
-
 			delete cb;
 		}
 
@@ -324,7 +319,6 @@ void TcpConnection::Write(
 		if (cb)
 		{
 			(*cb)(true);
-
 			delete cb;
 		}
 
@@ -501,6 +495,8 @@ inline void TcpConnection::OnUvRead(ssize_t nread, const uv_buf_t* /*buf*/)
 inline void TcpConnection::OnUvWrite(int status, TcpConnection::onSendCallback* cb)
 {
 	MS_TRACE();
+
+	// NOTE: Do not delete cb here since it will be delete in onWrite() above.
 
 	if (status == 0)
 	{
