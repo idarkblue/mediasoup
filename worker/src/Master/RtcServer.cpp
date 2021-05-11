@@ -158,6 +158,10 @@ int RtcServer::OnMessage(NetConnection *nc)
             ret = this->Heartbeat(request);
             break;
 
+            case RtcRequest::MethodId::STREAM_SHUTDOWN:
+            ret = this->ShutdownStream(request);
+            break;
+
             default:
             ret = -1;
             reason = "invalid message";
@@ -439,6 +443,30 @@ int RtcServer::CloseStream(RtcRequest *request)
 
 int RtcServer::Heartbeat(RtcRequest *request)
 {
+    return 0;
+}
+
+int RtcServer::ShutdownStream(RtcRequest *request)
+{
+    auto *rtcSession = this->FindSession(request);
+
+    if (!rtcSession) {
+        MS_THROW_ERROR("Session not found.");
+
+        return -1;
+    }
+
+    if (!rtcSession) {
+        PMS_INFO("SessionId[{}] StreamId[{}] session not found",
+            request->session, request->stream);
+        return -1;
+    }
+
+    rtcSession->Close();
+
+    PMS_INFO("SessionId[{}] StreamId[{}] shutting down",
+        rtcSession->GetSessionId(), request->stream);
+
     return 0;
 }
 

@@ -366,9 +366,34 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
 
 ```
 
-### 2.6.2 服务器响应
+## 2.7 stream.shutdown（关闭流请求）
 
-***示例：回复 close***
+### 2.7.1 客户端请求
+
+***关键参数：客户端发起 shutdown***
+
+***无私有参数***
+
+|     Key     |  ValType  |  Explain  |
+| :---------: | :-------: | :-------: |
+|    |  |  |
+
+***示例：发起 shutdown***
+
+``` json
+
+{
+    "version": "1.0",
+    "method": "stream.shutdown",
+    "stream": "xxxxx",
+    "data": { }
+}
+
+```
+
+### 2.7.2 服务器响应
+
+***示例：回复 shutdown***
 
 ``` json
 
@@ -376,7 +401,7 @@ MediaServer ->> client: 发流（rtp/rtcp over dtls）
     "version": "1.0",
     "err": 0,
     "err_msg": "succeed",
-    "method": "stream.close",
+    "method": "stream.shutdown",
     "data":{ }
 }
 

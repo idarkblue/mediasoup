@@ -281,7 +281,7 @@ int RtspServer::OnRecvSetup(RtspRemoteRequest &request)
     if (transportLine.empty()) {
         request.Error(RTSP_REPLY_CODE_BAD_REQUEST);
         PMS_ERROR("StreamId[{}] SessionId[{}] Invalid Rtsp request, missing transport line.",
-            ctx->streamId, ctx->sessionId, trackId);
+            ctx->streamId, ctx->sessionId);
         return -1;
     }
     std::string clientPorts = RtspHeaderLines::GetSplitValue(transportLine, ';', "client_port");

@@ -146,9 +146,14 @@ class RTCSession {
     role;
 
     connected;
+    ma;
+    mv;
+    sessionId;
 
     constructor(role) {
-        this.role = role
+        this.role = role;
+        this.ma = false;
+        this.mv = false;
     }
 
     start(url, sdp) {
@@ -172,6 +177,7 @@ class RTCSession {
             seq: 1,
             method: method,
             stream: this.streamId,
+            session: this.sessionId,
             data: data
         };
 
@@ -195,12 +201,38 @@ class RTCSession {
         this.send("stream.play", data);
     }
 
-    mute(muteAudio, muteVideo) {
+    mute(muteA, muteV) {
+        let data = {
+            video: muteV,
+            audio: muteA
+        };
 
+        this.send("stream.mute", data);
+    }
+
+    muteAudio () {
+        this.ma = true;
+        this.mute(this.ma, this.mv);
+    }
+
+    muteVideo () {
+        this.mv = true;
+        this.mute(this.ma, this.mv);
+    }
+
+    resumeAudio () {
+        this.ma = false;
+        this.mute(this.ma, this.mv);
+    }
+
+    resumeVideo () {
+        this.mv = false;
+        this.mute(this.ma, this.mv);
     }
 
     close() {
-
+        let data = {};
+        this.send("stream.close", data);
     }
 
     onWsOpen(evt) {
@@ -220,8 +252,13 @@ class RTCSession {
         console.log("Receive message: " + data);
         
         if (jsonAck.err == 0) {
-            console.log("sdp : " + jsonAck.data.sdp);
-            this.media.setRemoteSdp(jsonAck.data.sdp);
+            if (jsonAck.method == "stream.publish" ||
+                jsonAck.method == "stream.play") {
+
+                console.log("sdp : " + jsonAck.data.sdp);
+                this.media.setRemoteSdp(jsonAck.data.sdp);
+                this.sessionId = jsonAck.session;
+            }
         }
     }
 
@@ -262,28 +299,70 @@ async function play(url, streamId) {
     player.start(url, remoteMedia.localSdp);
 }
 
-let url = document.getElementById("url").value;
-
 let btPublish = document.getElementById("publish");
 let btPublishStop = document.getElementById("publishStop");
 
 let btPlay = document.getElementById("play");
 let btPlayStop = document.getElementById("playStop");
 
+let btPausePubVideo = document.getElementById("pausePubVideo");
+let btPausePubAudio = document.getElementById("pausePubAudio");
+let btPausePlayVideo = document.getElementById("pausePlayVideo");
+let btPausePlayAudio = document.getElementById("pausePlayAudio");
+
+let btResumePubVideo = document.getElementById("resumePubVideo");
+let btResumePubAudio = document.getElementById("resumePubAudio");
+let btResumePlayVideo = document.getElementById("resumePlayVideo");
+let btResumePlayAudio = document.getElementById("resumePlayAudio");
+
 btPublish.onclick = function () {
+    let url = document.getElementById("url").value;
     let publishStreamId = document.getElementById("publishStreamId").value;
     publish(url, publishStreamId);
 };
 
 btPublishStop.onclick = function () {
-   // rtc.stopCamera();
+    publisher.close();
 };
 
 btPlay.onclick = function () {
+    let url = document.getElementById("url").value;
     let playStreamId = document.getElementById("playStreamId").value;
     play(url, playStreamId);
 }
 
 btPlayStop.onclick = function () {
-   // rtc.stopCamera();
+   player.close();
 };
+
+btPausePubAudio.onclick = function () {
+    publisher.muteAudio();
+}
+
+btResumePubAudio.onclick = function () {
+    publisher.resumeAudio();
+}
+
+btPausePubVideo.onclick = function () {
+    publisher.muteVideo();
+}
+
+btResumePubVideo.onclick = function () {
+    publisher.resumeVideo();
+}
+
+btPausePlayVideo.onclick = function () {
+    player.muteVideo();
+}
+
+btPausePlayAudio.onclick = function () {
+    player.muteAudio();
+}
+
+btResumePlayVideo.onclick = function () {
+    player.resumeVideo();
+}
+
+btResumePlayAudio.onclick = function () {
+    player.resumeAudio();
+}

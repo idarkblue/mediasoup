@@ -19,12 +19,16 @@
 </head>
 <body>
     <div>
-        地址：<input type="text" id="url" value="wss://live.pingos.io:8889/"/>
+        地址：<input type="text" id="url" value="wss://live.pingos.io:8883/"/>
     </div>
     <div id="divPublisher">
         流名：<input type="text" id="publishStreamId" value="123456" />
         <button id="publish">推流</button>
         <button id="publishStop">停止</button>
+        <button id="pausePubVideo">pause video</button>
+        <button id="resumePubVideo">resume video</button>
+        <button id="pausePubAudio">pause audio</button>
+        <button id="resumePubAudio">resume audio</button>
         <video id="localVideo" autoplay muted ></video>
     </div>
 
@@ -32,6 +36,10 @@
         流名：<input type="text" id="playStreamId" value="123456" />
         <button id="play">播放</button>
         <button id="playStop">停止</button>
+        <button id="pausePlayVideo">pause video</button>
+        <button id="resumePlayVideo">resume video</button>
+        <button id="pausePlayAudio">pause audio</button>
+        <button id="resumePlayAudio">resume audio</button>
         <video id="remoteVideo" autoplay ></video>
     </div>
     <script src="./main.js"></script>

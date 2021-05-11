@@ -409,7 +409,7 @@ int RtcSession::Pause(std::string kind)
             continue;
         }
 
-        if (GenerateConsumerRequest("consume.pause", consumer.kind, request) != 0) {
+        if (GenerateConsumerRequest("consumer.pause", consumer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, generate consumer[{}] request error",
                 this->sessionId, this->streamId, consumer.kind);
             return -1;
@@ -418,6 +418,24 @@ int RtcSession::Pause(std::string kind)
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, consumer[{}] run request error",
                 this->sessionId, this->streamId, consumer.kind);
+            return -1;
+        }
+    }
+
+    for (auto &producer : this->producerParameters) {
+        if (kind != producer.kind) {
+            continue;
+        }
+
+        if (GenerateProducerRequest("producer.pause", producer.kind, request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, generate producer[{}] request error",
+                this->sessionId, this->streamId, producer.kind);
+            return -1;
+        }
+
+        if (ActiveRtcSessionRequest(request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] pause failed, producer[{}] run request error",
+                this->sessionId, this->streamId, producer.kind);
             return -1;
         }
     }
@@ -434,7 +452,7 @@ int RtcSession::Resume(std::string kind)
             continue;
         }
 
-        if (GenerateConsumerRequest("consume.resume", consumer.kind, request) != 0) {
+        if (GenerateConsumerRequest("consumer.resume", consumer.kind, request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, generate consumer[{}] request error",
                 this->sessionId, this->streamId, consumer.kind);
             return -1;
@@ -443,6 +461,24 @@ int RtcSession::Resume(std::string kind)
         if (ActiveRtcSessionRequest(request) != 0) {
             PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, consumer[{}] run request error",
                 this->sessionId, this->streamId, consumer.kind);
+            return -1;
+        }
+    }
+
+    for (auto &producer : this->producerParameters) {
+        if (kind != producer.kind) {
+            continue;
+        }
+
+        if (GenerateProducerRequest("producer.resume", producer.kind, request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, generate producer[{}] request error",
+                this->sessionId, this->streamId, producer.kind);
+            return -1;
+        }
+
+        if (ActiveRtcSessionRequest(request) != 0) {
+            PMS_ERROR("SessionId[{}] StreamId[{}] resume failed, producer[{}] run request error",
+                this->sessionId, this->streamId, producer.kind);
             return -1;
         }
     }

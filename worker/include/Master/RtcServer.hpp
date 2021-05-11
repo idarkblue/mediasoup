@@ -60,6 +60,7 @@ protected:
     int MuteStream(RtcRequest *request);
     int CloseStream(RtcRequest *request);
     int Heartbeat(RtcRequest *request);
+    int ShutdownStream(RtcRequest *request);
     int Pull(RtcRequest *request);
     void HoldPlayRequest(RtcRequest *request);
     void ActivePlayRequest(std::string streamId);
