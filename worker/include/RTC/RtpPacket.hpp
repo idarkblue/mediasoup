@@ -302,6 +302,52 @@ namespace RTC
 			this->videoOrientationExtensionId = id;
 		}
 
+		uint8_t GetMidExtensionId()
+		{
+			return this->midExtensionId;
+		}
+
+		uint8_t GetRidExtensionId()
+		{
+			return this->ridExtensionId;
+		}
+
+		uint8_t GetRepairedRidExtensionId()
+		{
+			return this->rridExtensionId;
+		}
+
+		uint8_t GetAbsSendTimeExtensionId()
+		{
+			return this->absSendTimeExtensionId;
+		}
+
+		uint8_t GetTransportWideCc01ExtensionId()
+		{
+			return this->transportWideCc01ExtensionId;
+		}
+
+		// NOTE: Remove once RFC.
+		uint8_t GetFrameMarking07ExtensionId()
+		{
+			return this->frameMarking07ExtensionId;
+		}
+
+		uint8_t GetFrameMarkingExtensionId()
+		{
+			return this->frameMarkingExtensionId;
+		}
+
+		uint8_t GetSsrcAudioLevelExtensionId()
+		{
+			return this->ssrcAudioLevelExtensionId;
+		}
+
+		uint8_t GetVideoOrientationExtensionId()
+		{
+			return this->videoOrientationExtensionId;
+		}
+
 		bool ReadMid(std::string& mid) const
 		{
 			uint8_t extenLen;

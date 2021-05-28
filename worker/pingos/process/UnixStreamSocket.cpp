@@ -1,5 +1,4 @@
 
-#define MS_CLASS "pingos::UnixStreamSocket"
 #define PMS_CLASS "pingos::UnixStreamSocket"
 // #define MS_LOG_DEV_LEVEL 3
 
@@ -26,18 +25,14 @@ static uint8_t WriteBuffer[NsMessageMaxLen];
 UnixStreamSocket::UnixStreamSocket(uv_pipe_t *handle, Listener* listener, ::UnixStreamSocket::Role role)
     : ::UnixStreamSocket(handle, NsMessageMaxLen, role), listener(listener)
 {
-    MS_TRACE_STD();
 }
 
 UnixStreamSocket::~UnixStreamSocket()
 {
-    MS_TRACE_STD();
 }
 
 void UnixStreamSocket::SetListener(Listener* listener)
 {
-    MS_TRACE_STD();
-
     this->listener = listener;
 }
 

@@ -235,6 +235,7 @@ namespace RTC
 		if (!IsActive())
 			return;
 
+#if 0
 		auto payloadType = packet->GetPayloadType();
 
 		// NOTE: This may happen if this Consumer supports just some codecs of those
@@ -245,7 +246,7 @@ namespace RTC
 
 			return;
 		}
-
+#endif
 		// If we need to sync, support key frames and this is not a key frame, ignore
 		// the packet.
 		if (this->syncRequired && this->keyFrameSupported && !packet->IsKeyFrame())
@@ -273,19 +274,65 @@ namespace RTC
 		// Save original packet fields.
 		auto origSsrc = packet->GetSsrc();
 		auto origSeq  = packet->GetSequenceNumber();
+		auto origPayloadType = packet->GetPayloadType();
 
 		// Rewrite packet.
 		packet->SetSsrc(this->rtpParameters.encodings[0].ssrc);
 		packet->SetSequenceNumber(seq);
+		packet->SetPayloadType(this->rtpParameters.codecs[0].payloadType);
 
-//		MS_DEBUG_TAG(
-//			  rtp,
-//			  "sending packet [ssrc:%" PRIu32 ", seq:%" PRIu16 ", ts:%" PRIu32
-//			  "] from original [seq:%" PRIu16 "]",
-//			  packet->GetSsrc(),
-//			  packet->GetSequenceNumber(),
-//			  packet->GetTimestamp(),
-//			  origSeq);
+		uint8_t origSsrcAudioLevelExtensionId = packet->GetSsrcAudioLevelExtensionId();
+		uint8_t origVideoOrientationExtensionId = packet->GetVideoOrientationExtensionId();
+		uint8_t origAbsSendTimeExtensionId = packet->GetAbsSendTimeExtensionId();
+		uint8_t origTransportWideCc01ExtensionId = packet->GetTransportWideCc01ExtensionId();
+		uint8_t origMidExtensionId = packet->GetMidExtensionId();
+		uint8_t origRidExtensionId = packet->GetRidExtensionId();
+		uint8_t origRridExtensionId = packet->GetRepairedRidExtensionId();
+		uint8_t origFrameMarking07ExtensionId = packet->GetFrameMarking07ExtensionId();
+		uint8_t origFrameMarkingExtensionId = packet->GetFrameMarkingExtensionId();
+
+		if (this->rtpHeaderExtensionIds.ssrcAudioLevel)
+		{
+			packet->SetSsrcAudioLevelExtensionId(this->rtpHeaderExtensionIds.ssrcAudioLevel);
+		}
+
+		if (this->rtpHeaderExtensionIds.videoOrientation)
+		{
+			packet->SetVideoOrientationExtensionId(this->rtpHeaderExtensionIds.videoOrientation);
+		}
+
+		if (this->rtpHeaderExtensionIds.absSendTime)
+		{
+			packet->SetAbsSendTimeExtensionId(this->rtpHeaderExtensionIds.absSendTime);
+		}
+
+		if (this->rtpHeaderExtensionIds.transportWideCc01)
+		{
+			packet->SetTransportWideCc01ExtensionId(this->rtpHeaderExtensionIds.transportWideCc01);
+		}
+
+		if (this->rtpHeaderExtensionIds.mid)
+		{
+			packet->SetMidExtensionId(this->rtpHeaderExtensionIds.mid);
+		}
+
+		if (this->rtpHeaderExtensionIds.rid)
+		{
+			packet->SetRidExtensionId(this->rtpHeaderExtensionIds.rid);
+		}
+
+		if (this->rtpHeaderExtensionIds.rrid)
+		{
+			packet->SetRepairedRidExtensionId(this->rtpHeaderExtensionIds.rrid);
+		}
+
+		if (this->rtpHeaderExtensionIds.frameMarking07) {
+			packet->SetFrameMarking07ExtensionId(this->rtpHeaderExtensionIds.frameMarking07);
+		}
+
+		if (this->rtpHeaderExtensionIds.frameMarking) {
+			packet->SetFrameMarkingExtensionId(this->rtpHeaderExtensionIds.frameMarking);
+		}
 
 		if (isSyncPacket)
 		{
@@ -323,6 +370,16 @@ namespace RTC
 		// Restore packet fields.
 		packet->SetSsrc(origSsrc);
 		packet->SetSequenceNumber(origSeq);
+		packet->SetPayloadType(origPayloadType);
+		packet->SetSsrcAudioLevelExtensionId(origSsrcAudioLevelExtensionId);
+		packet->SetVideoOrientationExtensionId(origVideoOrientationExtensionId);
+		packet->SetAbsSendTimeExtensionId(origAbsSendTimeExtensionId);
+		packet->SetTransportWideCc01ExtensionId(origTransportWideCc01ExtensionId);
+		packet->SetMidExtensionId(origMidExtensionId);
+		packet->SetRidExtensionId(origRidExtensionId);
+		packet->SetRepairedRidExtensionId(origRridExtensionId);
+		packet->SetFrameMarking07ExtensionId(origFrameMarking07ExtensionId);
+		packet->SetFrameMarkingExtensionId(origFrameMarkingExtensionId);
 	}
 
 	void SimpleConsumer::GetRtcp(

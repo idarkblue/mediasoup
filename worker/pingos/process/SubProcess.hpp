@@ -10,23 +10,23 @@
 
 namespace pingos {
 
-class SubprocessAgent : public UnixStreamSocket::Listener
+class SubProcess : public UnixStreamSocket::Listener
 {
 public:
     class Listener {
     public:
-        virtual void OnSubprocessExited(SubprocessAgent *w) = 0;
+        virtual void OnProcessExited(SubProcess *w) = 0;
     };
 
 public:
-    SubprocessAgent(uv_loop_t *loop);
-    virtual ~SubprocessAgent();
+    SubProcess(uv_loop_t *loop);
+    virtual ~SubProcess();
 
     int Start(int slot, std::string file);
     int SetListener(Listener *listener);
 
 public:
-    void OnSubprocessExited(uv_process_t *req, int64_t status, int termSignal);
+    void OnProcessExited(uv_process_t *req, int64_t status, int termSignal);
 
 // UnixStreamSocket listener
 public:
@@ -39,8 +39,7 @@ protected:
     int ChannelSend(std::string data);
 
 public:
-    virtual void ReceiveChannelMessage(std::string_view &payload) = 0;
-    virtual int ReceiveMasterMessage(std::string &payload) = 0;
+    virtual void OnProcessMessage(std::string_view &payload) = 0;
 
 private:
     uv_process_options_t options;

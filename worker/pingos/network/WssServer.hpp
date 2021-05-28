@@ -1,5 +1,4 @@
-#ifndef _WSS_HPP_INCLUDE_
-#define _WSS_HPP_INCLUDE_
+#pragma once
 
 #include <string>
 #include <map>
@@ -8,25 +7,26 @@
 #include "NetServer.hpp"
 
 namespace pingos {
-
-    class WssConnection : public NetConnection {
-    public:
-        WssConnection(void *handler);
-        virtual ~WssConnection();
-
-    public:
-        void SetSSL();
-
-    public:
-        // pingos::NetConnetion
-        int ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen) override;
-        int ReplyString(std::string data) override;
-
-    private:
-        bool ssl { false };
-    };
-
+    class WssServer;
     class WssServer : public NetServer {
+    public:
+        class WssConnection;
+        class WssConnection : public NetConnection {
+        public:
+            WssConnection() = default;
+            WssConnection(bool ssl);
+            virtual ~WssConnection() = default;
+
+        public:
+            void SetServer(WssServer *server);
+            void SetSSL(bool ssl);
+            virtual int Send(std::string &data);
+
+        public:
+            WssConnection *next { nullptr };
+            WssServer *server { nullptr };
+        };
+
     public:
         WssServer(uWS::CompressOptions compress,
                 int maxPayloadLength,
@@ -45,22 +45,23 @@ namespace pingos {
         void Close();
 
     public:
-        int Accept(std::string ip, uint16_t port, std::string location);
-        int Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase);
+        int Start(std::string ip, uint16_t port, std::string pattern);
+        int Start(std::string ip, uint16_t port, std::string pattern,
+            std::string keyfile, std::string certfile, std::string passphrase);
 
     protected:
-        NetConnection* NewConnection(void *handler) override;
-        void DeleteConnection(NetConnection *nc) override;
+        NetConnection* NewConnection(bool ssl) override;
+        void DeleteConnection(NetConnection*) override;
 
     private:
-        uWS::App *app { nullptr };
+        uWS::App    *app  { nullptr };
         uWS::SSLApp *sslApp { nullptr };
         us_listen_socket_t *listenSocket { nullptr };
         uWS::CompressOptions compression;
         int maxPayloadLength;
         int idleTimeout;
         int maxBackpressure;
+
+        WssConnection *freeConnections { nullptr };
     };
 }
-
-#endif

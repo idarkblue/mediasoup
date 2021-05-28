@@ -43,9 +43,9 @@ static void IgnoreSignals();
 
 void ModuleInit()
 {
-    pingos::ConsoleModule::ClassInit();
-    pingos::WebRtcModule::ClassInit();
-    pingos::Module::ClassInit();
+    // pingos::ConsoleModule::ClassInit();
+    // pingos::WebRtcModule::ClassInit();
+    // pingos::Module::ClassInit();
 }
 
 int WorkerMain(int argc, char* argv[])
@@ -147,7 +147,7 @@ int WorkerMain(int argc, char* argv[])
 
 		ModuleInit();
 		MS_DEBUG_DEV("starting libuv loop");
-		cc.SetEventListener(pingos::ConsoleModule::Get());
+		//cc.SetEventListener(pingos::ConsoleModule::Get());
 
 		MS_DEBUG_DEV("starting libuv loop");
 		pingos::Loop::Run();

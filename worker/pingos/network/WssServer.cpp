@@ -5,45 +5,24 @@
 
 namespace pingos {
 
-    WssConnection::WssConnection(void *handler) : NetConnection(handler)
+    WssServer::WssConnection(bool ssl): NetConnection(ssl)
     {
 
     }
 
-    WssConnection::~WssConnection()
+    void WssServer::WssConnection::SetSSL(bool ssl)
     {
+        this->ssl = ssl;
     }
 
-    void WssConnection::SetSSL()
-    {
-        this->ssl = true;
-    }
-
-    int WssConnection::ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen)
+    int WssServer::WssConnection::Send(std::string &data)
     {
         if (this->ssl) {
-            uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)this->GetHandler();
-
-            std::string content((const char *)nsPayload, nsPayloadLen);
-            ws->send(content, uWS::OpCode::BINARY);
-        } else {
-            uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)this->GetHandler();
-
-            std::string content((const char *)nsPayload, nsPayloadLen);
-            ws->send(content, uWS::OpCode::BINARY);
-        }
-
-        return 0;
-    }
-
-    int WssConnection::ReplyString(std::string data)
-    {
-        if (this->ssl) {
-            uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)this->GetHandler();
+            uWS::WebSocket<true, true> *ws = (uWS::WebSocket<true, true> *)this->GetHandle();
 
             ws->send(data, uWS::OpCode::TEXT);
         } else {
-            uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)this->GetHandler();
+            uWS::WebSocket<false, true> *ws = (uWS::WebSocket<false, true> *)this->GetHandle();
 
             ws->send(data, uWS::OpCode::TEXT);
         }
@@ -66,10 +45,10 @@ namespace pingos {
     }
 
     struct PerSocketData {
-        WssConnection *nc;
+        WssServer::WssConnection *nc;
     };
 
-    int WssServer::Accept(std::string ip, uint16_t port, std::string location)
+    int WssServer::Start(std::string ip, uint16_t port, std::string location)
     {
         this->app = new uWS::App();
 
@@ -83,7 +62,7 @@ namespace pingos {
             .upgrade = nullptr,
             .open = [this](auto *ws) {
                 auto psd = (PerSocketData *) ws->getUserData();
-                psd->nc = (WssConnection*) this->FetchConnection(ws);
+                psd->nc = (WssConnection*) this->FetchConnection(ws, false);
             },
             .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
                 auto psd = (PerSocketData *) ws->getUserData();
@@ -122,7 +101,7 @@ namespace pingos {
         return 0;
     }
 
-    int WssServer::Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase)
+    int WssServer::Start(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase)
     {
         this->sslApp = new uWS::SSLApp({
             .key_file_name = keyfile.c_str(),
@@ -143,8 +122,7 @@ namespace pingos {
             .upgrade = nullptr,
             .open = [this](auto *ws) {
                 auto psd = (PerSocketData *) ws->getUserData();
-                psd->nc = (WssConnection*) this->FetchConnection(ws);
-                psd->nc->SetSSL();
+                psd->nc = (WssConnection*) this->FetchConnection(ws, true);
             },
             .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
                 auto psd = (PerSocketData *) ws->getUserData();
@@ -183,14 +161,31 @@ namespace pingos {
         return 0;
     }
 
-    NetConnection* WssServer::NewConnection(void *handler)
+    NetConnection* WssServer::NewConnection(bool ssl)
     {
-        return new WssConnection(handler);
+        WssConnection *c;
+        if (freeConnections) {
+            c = freeConnections;
+            c->SetSSL(ssl);
+            freeConnections = freeConnections->next;
+        } else {
+            c = new WssConnection(ssl);
+        }
+
+        c->SetServer(this);
+
+        return c;
     }
 
     void WssServer::DeleteConnection(NetConnection *nc)
     {
-        delete (WssConnection*) nc;
+        WssConnection *wc = (WssConnection*)nc;
+        wc->next = freeConnections;
+        this->freeConnections = wc;
+
+        wc->ClearRecvBuffer();
+        wc->SetContext(nullptr);
+        wc->SetHandle(nullptr);
     }
 
     void WssServer::OnDrain(NetConnection *nc)
@@ -207,11 +202,13 @@ namespace pingos {
             return;
         }
 
-        nc->AppendReceiveBuffer(message);
+        std::string data = (std::string) message;
+        nc->AppendRecvBuffer(data);
 
         if (this->listener) {
             this->listener->OnNetDataReceived(nc);
         }
+        nc->ClearRecvBuffer();
     }
 
     void WssServer::OnPing(NetConnection *nc)
@@ -232,7 +229,7 @@ namespace pingos {
             this->listener->OnNetDisconnected(nc);
         }
 
-        this->RemoveConnection(nc->GetHandler());
+        this->RemoveConnection(nc->GetHandle());
     }
 
     void WssServer::Close()

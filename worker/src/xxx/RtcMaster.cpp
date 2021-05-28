@@ -62,12 +62,12 @@ RtcWorker* RtcMaster::FindWorker(uint32_t slot)
     return nullptr;
 }
 
-Worker* RtcMaster::NewWorker(uv_loop_t *loop)
+Worker* RtcMaster::NewProcess(uv_loop_t *loop)
 {
     return new RtcWorker(loop);
 }
 
-void RtcMaster::DeleteWorker(Worker *worker)
+void RtcMaster::DeleteProcess(Worker *worker)
 {
     delete (RtcWorker*)worker;
 }

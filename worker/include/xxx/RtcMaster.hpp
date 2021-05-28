@@ -19,8 +19,8 @@ public:
     void DeleteSession(std::string streamId, std::string esssionId);
 
 protected:
-    virtual Worker* NewWorker(uv_loop_t *loop) override;
-    virtual void DeleteWorker(Worker *worker) override;
+    virtual Worker* NewProcess(uv_loop_t *loop) override;
+    virtual void DeleteProcess(Worker *worker) override;
 
 private:
     std::string SpellSessionId();

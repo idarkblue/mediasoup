@@ -7,11 +7,9 @@ extern "C" {
 #include "core/Loop.hpp"
 #include "core/Configuration.hpp"
 #include "core/Module.hpp"
-#include "master/PMSMasterProcess.hpp"
+#include "RtcMaster.hpp"
 #include "network/HttpServer.hpp"
 #include "network/WssServer.hpp"
-#include "modules/ConsoleModule.hpp"
-#include "modules/WebRtcModule.hpp"
 #include "transform/sdptransform.hpp"
 #include "logger/Log.hpp"
 
@@ -61,9 +59,9 @@ int MasterMain(int argc, char* argv[])
 
     pingos::Log::ClassInit(pingos::Configuration::log.file,
         pingos::Configuration::log.fileLevel, pingos::Configuration::log.fileLevel);
-    pingos::MasterProcess::ClassInit(pingos::Loop::FetchLoop());
+    pingos::MainProcess::ClassInit(pingos::Loop::FetchLoop());
 
-    pingos::PMSMasterProcess master;
+    pingos::RtcMaster master;
 
     master.Start();
 

@@ -1,55 +1,51 @@
 #pragma once
 
-#include <string>
-#include <map>
-#include <list>
+#include <uv.h>
 #include "App.h"
 #include "NetServer.hpp"
 
 namespace pingos {
 
+    class HttpServer;
     class HttpConnection;
 
-    class HttpConnection : public NetConnection {
-    public:
-        HttpConnection(void *handler);
-        virtual ~HttpConnection();
-
-    public:
-        void SetSSL();
-
-    public:
-        // pingos::NetConnetion
-        int ReplyBinary(const uint8_t *nsPayload, size_t nsPayloadLen) override;
-        int ReplyString(std::string data) override;
-
-    public:
-        HttpConnection *next { nullptr };
-
-    private:
-        bool ssl { false };
-    };
-
     class HttpServer : public NetServer {
-
     public:
-        HttpServer(Listener *listener = nullptr);
+        HttpServer();
         virtual ~HttpServer();
 
-        int OnPost(void *handle, uWS::HttpRequest *req, std::string_view chunk, bool isEnd, bool ssl);
-        void OnDisconnect(void *handle);
+    public:
+        class HttpConnection : public NetConnection {
+        public:
+            HttpConnection() = default;
+            HttpConnection(bool ssl);
+            virtual ~HttpConnection() = default;
+
+        public:
+            void SetServer(HttpServer *server);
+            void SetSSL(bool ssl);
+            virtual int Send(std::string &data);
+
+        public:
+            HttpConnection *next { nullptr };
+
+        private:
+            HttpServer *server;
+        };
 
     public:
-        int Accept(std::string ip, uint16_t port, std::string location);
-        int Accept(std::string ip, uint16_t port, std::string location, std::string keyfile, std::string certfile, std::string passphrase);
+        static void ClassInit(uv_loop_t * loop);
+        int Start(std::string ip, uint16_t port, std::string pattern);
+        int Start(std::string ip, uint16_t port, std::string pattern,
+            std::string keyfile, std::string certfile, std::string passphrase);
 
     protected:
-        NetConnection* NewConnection(void *handler) override;
-        void DeleteConnection(NetConnection *nc) override;
+        NetConnection* NewConnection(bool ssl) override;
+        void DeleteConnection(NetConnection*) override;
 
     private:
-        uWS::App        *app  { nullptr };
-        uWS::SSLApp     *sslApp { nullptr };
+        uWS::App    *app  { nullptr };
+        uWS::SSLApp *sslApp { nullptr };
 
         HttpConnection *freeConnections { nullptr };
     };

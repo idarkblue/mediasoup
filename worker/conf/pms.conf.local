@@ -1,0 +1,65 @@
+{
+    "log": {
+        "file": "./logs/pms.log",
+        "workerLevel": "debug",
+        "fileLevel": "debug",
+        "consolLevel": "debug",
+        "workerTags": ["info", "ice", "dtls", "rtp", "srtp", "rtcp", "rtx", "bwe", "score", "simulcast", "svc", "sctp", "message"]
+    },
+
+    "websocket": {
+        "port": 6089,
+        "sslPort": 6083,
+        "listenIp": "0.0.0.0",
+        "keyFile": "./certs/privkey.pem",
+        "certFile": "./certs/full_chain.pem",
+        "passPhrase": "",
+        "location": "/",
+        "idleTimeout": 100,
+        "maxBackpressure": 0,
+        "maxPayloadLength": 16000000
+    },
+
+    "http": {
+        "port": 6081,
+        "sslPort": 6043,
+        "listenIp": "0.0.0.0",
+        "keyFile": "./certs/privkey.pem",
+        "certFile": "./certs/full_chain.pem",
+        "passPhrase": "",
+        "location": "/"
+    },
+
+    "rtsp": {
+        "port": 6054,
+        "listenIp": "0.0.0.0"
+    },
+
+    "master": {
+        "numOfWorkerProcess": 1,
+        "execPath": "./",
+        "workerName": "mediasoup-worker",
+        "unixSocketPath": "./logs/pms"
+    },
+
+    "webrtc": {
+        "listenIp": "0.0.0.0",
+        "announcedIp": "122.51.177.240",
+        "minPort": 6000,
+        "maxPort": 6100,
+        "dtlsCertificateFile": "./certs/full_chain.pem",
+        "dtlsPrivateKeyFile": "./certs/privkey.pem"
+    },
+
+    "record": {
+        "targetHost": "127.0.0.1",
+        "targetPort": 6054,
+        "recordPath": "./record/",
+        "execRecordDone": "",
+        "cmdPort": 6088
+    },
+
+    "pull":
+        [
+        ]
+}

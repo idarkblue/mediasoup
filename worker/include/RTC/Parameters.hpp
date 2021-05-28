@@ -78,12 +78,12 @@ namespace RTC
 		const std::string& GetString(const std::string& key) const;
 		const std::vector<int32_t>& GetArrayOfIntegers(const std::string& key) const;
 
-	void operator=(const Parameters &parameters)
-	{
-		for (auto it = parameters.mapKeyValues.begin(); it != parameters.mapKeyValues.end(); it++) {
-			this->mapKeyValues.emplace(it->first, it->second);
-		}
-	}
+	// void operator=(const Parameters &parameters)
+	// {
+	// 	for (auto it = parameters.mapKeyValues.begin(); it != parameters.mapKeyValues.end(); it++) {
+	// 		this->mapKeyValues.emplace(it->first, it->second);
+	// 	}
+	// }
 	private:
 		std::unordered_map<std::string, Value> mapKeyValues;
 	};
